@@ -97,25 +97,26 @@ const InterviewSimulator = () => {
           {modes.map((mode) => {
             const Icon = mode.icon;
             return (
-              <Card 
+              <div 
                 key={mode.id}
-                hover
                 onClick={() => setSelectedMode(mode.id)}
                 className="cursor-pointer"
               >
-                <div className="space-y-4">
-                  <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${mode.color}`}>
-                    <Icon className="w-8 h-8" />
+                <Card hover>
+                  <div className="space-y-4">
+                    <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${mode.color}`}>
+                      <Icon className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold mb-2">{mode.name}</h3>
+                      <p className="text-slate-400">{mode.description}</p>
+                    </div>
+                    <button className={`w-full py-3 rounded-lg bg-gradient-to-r ${mode.color} hover:shadow-lg transition-all font-semibold`}>
+                      Select This Mode
+                    </button>
                   </div>
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">{mode.name}</h3>
-                    <p className="text-slate-400">{mode.description}</p>
-                  </div>
-                  <button className={`w-full py-3 rounded-lg bg-gradient-to-r ${mode.color} hover:shadow-lg transition-all font-semibold`}>
-                    Select This Mode
-                  </button>
-                </div>
-              </Card>
+                </Card>
+              </div>
             );
           })}
         </div>
@@ -164,28 +165,29 @@ const InterviewSimulator = () => {
             const questionCount = getQuestionsByRole(role.id).length;
             
             return (
-              <Card 
+              <div 
                 key={role.id}
-                hover
                 onClick={() => setSelectedRole(role.id)}
                 className="cursor-pointer"
               >
-                <div className="space-y-4">
-                  <div className="text-5xl">{role.icon}</div>
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">{role.name}</h3>
-                    <p className="text-sm text-slate-400 mb-3">{role.description}</p>
-                    <div className="flex items-center space-x-2 text-xs text-slate-500">
-                      <span>{questionCount} questions</span>
-                      <span>•</span>
-                      <span>{role.categories.join(', ')}</span>
+                <Card hover>
+                  <div className="space-y-4">
+                    <div className="text-5xl">{role.icon}</div>
+                    <div>
+                      <h3 className="text-xl font-bold mb-2">{role.name}</h3>
+                      <p className="text-sm text-slate-400 mb-3">{role.description}</p>
+                      <div className="flex items-center space-x-2 text-xs text-slate-500">
+                        <span>{questionCount} questions</span>
+                        <span>•</span>
+                        <span>{role.categories.join(', ')}</span>
+                      </div>
                     </div>
+                    <button className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:shadow-lg transition-all font-semibold">
+                      Practice This Role
+                    </button>
                   </div>
-                  <button className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 hover:shadow-lg transition-all font-semibold">
-                    Practice This Role
-                  </button>
-                </div>
-              </Card>
+                </Card>
+              </div>
             );
           })}
         </div>

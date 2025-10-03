@@ -42,6 +42,204 @@ const PronunciationLab = () => {
       category: 'Chemistry',
       tips: 'Four syllables: e-qui-LI-bri-um',
       alternates: ['equilibria']
+    },
+    {
+      id: 4,
+      word: 'Phenomenon',
+      phonetic: '/fəˈnɒmɪnən/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'Stress on second syllable: fe-NOM-e-non',
+      alternates: ['phenomena']
+    },
+    {
+      id: 5,
+      word: 'Viscosity',
+      phonetic: '/vɪˈskɒsəti/',
+      difficulty: 'beginner',
+      category: 'Physics',
+      tips: 'vis-COS-i-ty',
+      alternates: []
+    },
+    {
+      id: 6,
+      word: 'Synthesis',
+      phonetic: '/ˈsɪnθəsɪs/',
+      difficulty: 'beginner',
+      category: 'Chemistry',
+      tips: 'SYN-the-sis',
+      alternates: ['synthesize', 'synthesized']
+    },
+    {
+      id: 7,
+      word: 'Negligible',
+      phonetic: '/ˈneɡlɪdʒəbl/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'NEG-li-gi-ble',
+      alternates: []
+    },
+    {
+      id: 8,
+      word: 'Stoichiometry',
+      phonetic: '/ˌstɔɪkiˈɒmɪtri/',
+      difficulty: 'advanced',
+      category: 'Chemistry',
+      tips: 'stoy-key-OM-e-tree',
+      alternates: ['stoichiometric']
+    },
+    {
+      id: 9,
+      word: 'Pharmaceutical',
+      phonetic: '/ˌfɑːrməˈsuːtɪkəl/',
+      difficulty: 'advanced',
+      category: 'Medicine',
+      tips: 'far-ma-SOO-ti-cal',
+      alternates: ['pharmaceuticals']
+    },
+    {
+      id: 10,
+      word: 'Algorithm',
+      phonetic: '/ˈælɡərɪðəm/',
+      difficulty: 'beginner',
+      category: 'Computer Science',
+      tips: 'AL-go-rith-m',
+      alternates: ['algorithms', 'algorithmic']
+    },
+    {
+      id: 11,
+      word: 'Entrepreneur',
+      phonetic: '/ˌɑːntrəprəˈnɜːr/',
+      difficulty: 'intermediate',
+      category: 'Business',
+      tips: 'on-tre-pre-NUR',
+      alternates: ['entrepreneurial']
+    },
+    {
+      id: 12,
+      word: 'Pronunciation',
+      phonetic: '/prəˌnʌnsiˈeɪʃn/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'pro-nun-see-A-shun (not pro-NOWN-ciation)',
+      alternates: []
+    },
+    {
+      id: 13,
+      word: 'Infrastructure',
+      phonetic: '/ˈɪnfrəstrʌktʃər/',
+      difficulty: 'intermediate',
+      category: 'Engineering',
+      tips: 'IN-fra-struc-ture',
+      alternates: []
+    },
+    {
+      id: 14,
+      word: 'Photosynthesis',
+      phonetic: '/ˌfoʊtoʊˈsɪnθəsɪs/',
+      difficulty: 'intermediate',
+      category: 'Biology',
+      tips: 'fo-to-SIN-the-sis',
+      alternates: []
+    },
+    {
+      id: 15,
+      word: 'Bureaucracy',
+      phonetic: '/bjʊˈrɒkrəsi/',
+      difficulty: 'advanced',
+      category: 'Government',
+      tips: 'byoo-ROK-ra-see',
+      alternates: ['bureaucratic']
+    },
+    {
+      id: 16,
+      word: 'Specific',
+      phonetic: '/spəˈsɪfɪk/',
+      difficulty: 'beginner',
+      category: 'General',
+      tips: 'spe-SI-fik (not pa-SI-fik)',
+      alternates: ['specifically']
+    },
+    {
+      id: 17,
+      word: 'Statistics',
+      phonetic: '/stəˈtɪstɪks/',
+      difficulty: 'beginner',
+      category: 'Mathematics',
+      tips: 'sta-TIS-tiks',
+      alternates: ['statistical']
+    },
+    {
+      id: 18,
+      word: 'Prestigious',
+      phonetic: '/preˈstɪdʒəs/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'pre-STI-jus',
+      alternates: ['prestige']
+    },
+    {
+      id: 19,
+      word: 'Hierarchy',
+      phonetic: '/ˈhaɪərɑːrki/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'HI-er-ar-key',
+      alternates: ['hierarchical']
+    },
+    {
+      id: 20,
+      word: 'Exponential',
+      phonetic: '/ˌekspəˈnenʃl/',
+      difficulty: 'intermediate',
+      category: 'Mathematics',
+      tips: 'ex-po-NEN-shal',
+      alternates: ['exponentially']
+    },
+    {
+      id: 21,
+      word: 'Homogeneous',
+      phonetic: '/ˌhoʊməˈdʒiːniəs/',
+      difficulty: 'advanced',
+      category: 'Chemistry',
+      tips: 'ho-mo-JEE-nee-us',
+      alternates: ['homogeneity']
+    },
+    {
+      id: 22,
+      word: 'Deteriorate',
+      phonetic: '/dɪˈtɪriəreɪt/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'de-TEER-ee-or-ate',
+      alternates: ['deterioration']
+    },
+    {
+      id: 23,
+      word: 'Miscellaneous',
+      phonetic: '/ˌmɪsəˈleɪniəs/',
+      difficulty: 'advanced',
+      category: 'General',
+      tips: 'mis-el-LAY-nee-us',
+      alternates: []
+    },
+    {
+      id: 24,
+      word: 'Temperature',
+      phonetic: '/ˈtemprətʃər/',
+      difficulty: 'beginner',
+      category: 'Science',
+      tips: 'TEM-per-a-ture (not tem-PER-a-ture)',
+      alternates: ['temperatures']
+    },
+    {
+      id: 25,
+      word: 'Anonymous',
+      phonetic: '/əˈnɒnɪməs/',
+      difficulty: 'intermediate',
+      category: 'General',
+      tips: 'a-NON-i-mus',
+      alternates: ['anonymity']
     }
   ];
 
