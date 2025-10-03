@@ -1,5 +1,6 @@
+// src/components/writing/WritingChecker.jsx
 import React, { useState } from 'react';
-import { PenTool, CheckCircle2, AlertTriangle, Lightbulb, Sparkles } from 'lucide-react';
+import { PenTool, CheckCircle2, AlertTriangle, Lightbulb, Sparkles, FileText } from 'lucide-react';
 import Card from '../shared/Card';
 import Button from '../shared/Button';
 import groqService from '../../services/groqService';
@@ -14,17 +15,23 @@ const WritingChecker = () => {
 
     setIsAnalyzing(true);
     try {
-      const prompt = `Analyze this text for grammar, style, and clarity. Provide:
+      const prompt = `Analyze this text for grammar, style, and clarity. Provide feedback in this format:
 
-1. Grammar Issues (if any)
-2. Style Suggestions (2-3 points)
-3. Clarity Improvements (1-2 points)
-4. Overall Rating (1-10)
+**Grammar Issues:**
+- List any grammar errors found (or "No major issues")
 
-Be specific and constructive. Format as clear bullet points.
+**Style Suggestions:**
+- 2-3 specific improvements for better writing
+
+**Clarity:**
+- 1-2 ways to make the text clearer
+
+**Overall Rating:** X/10
 
 Text to analyze:
-"${text}"`;
+"${text}"
+
+Be specific, constructive, and helpful.`;
 
       const response = await groqService.chat(prompt, { 
         type: 'grammar',
@@ -34,12 +41,13 @@ Text to analyze:
       setAnalysis({
         feedback: response,
         wordCount: text.split(/\s+/).filter(w => w).length,
-        charCount: text.length
+        charCount: text.length,
+        sentences: text.split(/[.!?]+/).filter(s => s.trim()).length
       });
     } catch (error) {
       console.error('Analysis error:', error);
       setAnalysis({
-        feedback: 'Unable to analyze. Please check your internet connection and try again.',
+        feedback: 'Unable to analyze. Please check your internet connection and Groq API key.',
         error: true
       });
     } finally {
@@ -54,29 +62,26 @@ Text to analyze:
 
   const exampleTexts = [
     {
-      label: 'Technical Writing',
-      text: 'The experiment was conducted at ambient temperature. Results shows that the catalyst increase reaction rate significantly.'
+      label: 'Technical Email',
+      text: 'Dear team, I am writing to inform you about the new procedure. The results shows significant improvement. Please review the data and provide feedback by Friday.'
     },
     {
-      label: 'Business Email',
-      text: 'Dear Sir, I am writing to inform you about the meeting. It will be held next week. Please confirm your attendance.'
+      label: 'Lab Report',
+      text: 'The experiment was conducted at room temperature. Results was recorded every hour. The catalyst increased reaction rate significantly which is good for industrial applications.'
+    },
+    {
+      label: 'Business Proposal',
+      text: 'We propose to implement a new system. This will help improve efficiency. The cost is estimated at $50,000. Implementation time is 3 months.'
     }
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <PenTool className="w-8 h-8 text-purple-400" />
-          <div>
-            <h2 className="text-2xl font-bold">AI Writing Checker</h2>
-            <p className="text-slate-400 text-sm">Get instant feedback powered by Groq AI</p>
-          </div>
-        </div>
-      </div>
-
       <Card>
-        <h3 className="text-lg font-semibold mb-3">Try an example:</h3>
+        <h3 className="text-lg font-semibold mb-3 flex items-center">
+          <FileText className="w-5 h-5 mr-2 text-purple-400" />
+          Try an example:
+        </h3>
         <div className="flex flex-wrap gap-2">
           {exampleTexts.map((example, idx) => (
             <button
@@ -93,11 +98,14 @@ Text to analyze:
       <Card>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Your Text</label>
+            <label className="block text-sm font-medium mb-2 flex items-center">
+              <PenTool className="w-4 h-4 mr-2" />
+              Your Text
+            </label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Paste or type your text here..."
+              placeholder="Paste or type your text here... (emails, reports, essays, etc.)"
               className="w-full h-48 px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
             />
           </div>
@@ -105,7 +113,7 @@ Text to analyze:
           {text && (
             <div className="flex items-center justify-between text-sm text-slate-400">
               <span>
-                {text.split(/\s+/).filter(w => w).length} words • {text.length} characters
+                {text.split(/\s+/).filter(w => w).length} words • {text.length} characters • {text.split(/[.!?]+/).filter(s => s.trim()).length} sentences
               </span>
             </div>
           )}
@@ -119,7 +127,7 @@ Text to analyze:
               {isAnalyzing ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Analyzing...
+                  Analyzing with Groq AI...
                 </>
               ) : (
                 <>
@@ -141,7 +149,7 @@ Text to analyze:
       </Card>
 
       {analysis && (
-        <Card>
+        <Card className={analysis.error ? 'border-red-500/50' : 'border-green-500/50'}>
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               {analysis.error ? (
@@ -153,20 +161,24 @@ Text to analyze:
             </div>
 
             {!analysis.error && (
-              <div className="grid grid-cols-2 gap-4 p-4 bg-slate-900/50 rounded-lg">
-                <div>
+              <div className="grid grid-cols-3 gap-4 p-4 bg-slate-900/50 rounded-lg">
+                <div className="text-center">
                   <p className="text-slate-400 text-sm">Words</p>
-                  <p className="text-2xl font-bold">{analysis.wordCount}</p>
+                  <p className="text-2xl font-bold text-blue-400">{analysis.wordCount}</p>
                 </div>
-                <div>
+                <div className="text-center">
                   <p className="text-slate-400 text-sm">Characters</p>
-                  <p className="text-2xl font-bold">{analysis.charCount}</p>
+                  <p className="text-2xl font-bold text-purple-400">{analysis.charCount}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-slate-400 text-sm">Sentences</p>
+                  <p className="text-2xl font-bold text-green-400">{analysis.sentences}</p>
                 </div>
               </div>
             )}
 
             <div className="prose prose-invert max-w-none">
-              <div className="p-4 bg-slate-900/50 rounded-lg whitespace-pre-wrap">
+              <div className="p-4 bg-slate-900/50 rounded-lg whitespace-pre-wrap text-slate-200 leading-relaxed">
                 {analysis.feedback}
               </div>
             </div>
@@ -176,7 +188,7 @@ Text to analyze:
                 <Lightbulb className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <div className="text-sm text-blue-300">
                   <p className="font-semibold mb-1">Pro Tip</p>
-                  <p>Apply these suggestions to improve clarity and professionalism in your writing.</p>
+                  <p>Apply these suggestions to improve clarity and professionalism. Consider reading your text aloud to catch awkward phrasing.</p>
                 </div>
               </div>
             )}
