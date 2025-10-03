@@ -5,19 +5,20 @@ class ElevenLabsTTS {
   constructor() {
     this.apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY;
     this.voiceId = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - natural female voice
-    // Alternative voices:
-    // 'pNInz6obpgDQGcFmaJgB' - Adam - natural male
-    // 'ThT5KcBeYPX3keUQqHPh' - Dorothy - pleasant female
+    this.currentAudio = null;
   }
 
   async speak(text) {
+    // Stop any currently playing audio
+    this.stop();
+
     if (!this.apiKey) {
-      console.warn('ElevenLabs API key not found, falling back to browser TTS');
+      console.warn('ElevenLabs API key not found, using browser TTS');
       return this.fallbackSpeak(text);
     }
 
     try {
-      console.log('Speaking with ElevenLabs:', text.substring(0, 50) + '...');
+      console.log('🔊 Speaking with ElevenLabs:', text.substring(0, 50) + '...');
 
       const response = await fetch(
         `https://api.elevenlabs.io/v1/text-to-speech/${this.voiceId}`,
@@ -32,28 +33,47 @@ class ElevenLabsTTS {
             text: text,
             model_id: 'eleven_monolingual_v1',
             voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.75
+              stability: 0.6,
+              similarity_boost: 0.8,
+              style: 0.5,
+              use_speaker_boost: true
             }
           })
         }
       );
 
       if (!response.ok) {
-        throw new Error(`ElevenLabs API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('ElevenLabs API error:', response.status, errorText);
+        
+        if (response.status === 401) {
+          console.error('❌ Invalid ElevenLabs API key');
+        }
+        
+        throw new Error(`API Error: ${response.status}`);
       }
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       const audio = new Audio(audioUrl);
+      this.currentAudio = audio;
       
       return new Promise((resolve, reject) => {
         audio.onended = () => {
           URL.revokeObjectURL(audioUrl);
+          this.currentAudio = null;
+          console.log('✓ ElevenLabs playback complete');
           resolve();
         };
-        audio.onerror = reject;
-        audio.play();
+        audio.onerror = (error) => {
+          console.error('Audio playback error:', error);
+          this.currentAudio = null;
+          reject(error);
+        };
+        audio.play().catch(error => {
+          console.error('Play failed:', error);
+          reject(error);
+        });
       });
 
     } catch (error) {
@@ -64,6 +84,7 @@ class ElevenLabsTTS {
   }
 
   fallbackSpeak(text) {
+    console.log('🔊 Using browser TTS');
     return new Promise((resolve) => {
       window.speechSynthesis.cancel();
       
@@ -74,7 +95,7 @@ class ElevenLabsTTS {
       
       const voices = window.speechSynthesis.getVoices();
       const preferredVoice = voices.find(v => 
-        v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Microsoft'))
+        v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Samantha'))
       ) || voices.find(v => v.lang.startsWith('en'));
       
       if (preferredVoice) {
@@ -89,6 +110,11 @@ class ElevenLabsTTS {
   }
 
   stop() {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
     window.speechSynthesis.cancel();
   }
 }
