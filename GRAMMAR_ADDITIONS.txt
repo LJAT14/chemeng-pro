@@ -1,0 +1,81 @@
+// ADD THESE TO YOUR EXISTING grammarRules array in src/data/grammarRules.js
+
+// Present Perfect Continuous
+{
+  id: 'present-perfect-continuous',
+  category: 'tenses',
+  title: { en: 'Present Perfect Continuous', pt: 'Presente Perfeito Contínuo' },
+  difficulty: 'intermediate',
+  explanation: {
+    en: 'Used for actions that started in the past and are still continuing',
+    pt: 'Usado para ações que começaram no passado e ainda continuam'
+  },
+  rules: [
+    { en: 'Form: have/has been + verb-ing', pt: 'Forma: have/has been + verbo-ing' },
+    { en: 'Emphasizes duration of ongoing action', pt: 'Enfatiza duração de ação em andamento' }
+  ],
+  examples: [
+    { en: 'I have been studying English for 5 years', pt: 'Estudo inglês há 5 anos' },
+    { en: 'She has been working here since January', pt: 'Ela trabalha aqui desde janeiro' }
+  ]
+},
+
+// Past Perfect
+{
+  id: 'past-perfect',
+  category: 'tenses',
+  title: { en: 'Past Perfect', pt: 'Passado Perfeito' },
+  difficulty: 'intermediate',
+  explanation: {
+    en: 'Used for actions completed before another past action',
+    pt: 'Usado para ações completadas antes de outra ação no passado'
+  },
+  rules: [
+    { en: 'Form: had + past participle', pt: 'Forma: had + particípio passado' }
+  ],
+  examples: [
+    { en: 'Before the experiment failed, we had tested it three times', pt: 'Antes do experimento falhar, tínhamos testado três vezes' }
+  ]
+},
+
+// Modal: Could (ability)
+{
+  id: 'modal-could-ability',
+  category: 'modals',
+  title: { en: 'Could - Past Ability', pt: 'Could - Habilidade Passada' },
+  difficulty: 'beginner',
+  explanation: {
+    en: 'Expresses past ability or polite requests',
+    pt: 'Expressa habilidade passada ou pedidos educados'
+  },
+  rules: [
+    { en: 'Past ability: could + base verb', pt: 'Habilidade passada: could + verbo base' },
+    { en: 'Polite request: Could you...?', pt: 'Pedido educado: Could you...?' }
+  ],
+  examples: [
+    { en: 'I could speak French when I was young', pt: 'Eu falava francês quando era jovem' },
+    { en: 'Could you send me the report?', pt: 'Você poderia me enviar o relatório?' }
+  ]
+},
+
+// Comparatives with -er
+{
+  id: 'comparatives-er',
+  category: 'comparison',
+  title: { en: 'Comparatives with -er', pt: 'Comparativos com -er' },
+  difficulty: 'beginner',
+  explanation: {
+    en: 'Short adjectives add -er to compare two things',
+    pt: 'Adjetivos curtos adicionam -er para comparar duas coisas'
+  },
+  rules: [
+    { en: 'One syllable: add -er (fast → faster)', pt: 'Uma sílaba: adicione -er' },
+    { en: 'Two syllables ending in -y: change to -ier (busy → busier)', pt: 'Duas sílabas terminando em -y: mude para -ier' }
+  ],
+  examples: [
+    { en: 'This method is faster than the old one', pt: 'Este método é mais rápido que o antigo' },
+    { en: 'The new catalyst is cheaper', pt: 'O novo catalisador é mais barato' }
+  ]
+}
+
+// COPY AND PASTE THE ABOVE INTO YOUR src/data/grammarRules.js FILE

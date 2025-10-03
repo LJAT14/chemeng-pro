@@ -1,0 +1,47 @@
+// ADD THESE TO YOUR EXISTING interviewQuestions array in src/data/interviewQuestions.js
+
+// CONVERSATIONAL QUESTIONS
+{
+  id: 'conv-001',
+  category: 'conversational',
+  difficulty: 'beginner',
+  question: {
+    en: 'How was your day today?',
+    pt: 'Como foi seu dia hoje?'
+  },
+  keywords: ['good', 'productive', 'busy', 'routine', 'work'],
+  idealAnswer: {
+    en: 'My day was productive. I attended meetings and completed my tasks.',
+    pt: 'Meu dia foi produtivo. Participei de reuniões e completei minhas tarefas.'
+  }
+},
+{
+  id: 'conv-002',
+  category: 'conversational',
+  difficulty: 'beginner',
+  question: {
+    en: 'What are your hobbies?',
+    pt: 'Quais são seus hobbies?'
+  },
+  keywords: ['reading', 'sports', 'music', 'travel', 'enjoy'],
+  idealAnswer: {
+    en: 'I enjoy reading and playing tennis on weekends.',
+    pt: 'Gosto de ler e jogar tênis nos fins de semana.'
+  }
+},
+{
+  id: 'conv-003',
+  category: 'conversational',
+  difficulty: 'beginner',
+  question: {
+    en: 'Tell me about your family.',
+    pt: 'Fale sobre sua família.'
+  },
+  keywords: ['parents', 'siblings', 'family', 'close'],
+  idealAnswer: {
+    en: 'I have a small family. My parents live nearby and I have one sister.',
+    pt: 'Tenho uma família pequena. Meus pais moram perto e tenho uma irmã.'
+  }
+}
+
+// COPY AND PASTE THE ABOVE INTO YOUR src/data/interviewQuestions.js FILE
