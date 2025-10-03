@@ -1,3 +1,4 @@
+// src/App.jsx - Enhanced with better animations and gradients
 import React, { useState } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -33,19 +34,42 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+      {/* Animated background gradients */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        {/* Purple gradient blob */}
+        <div 
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDuration: '4s' }}
+        ></div>
+        
+        {/* Blue gradient blob */}
+        <div 
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" 
+          style={{ animationDelay: '1s', animationDuration: '5s' }}
+        ></div>
+        
+        {/* Green gradient blob */}
+        <div 
+          className="absolute top-1/2 left-1/2 w-64 h-64 bg-green-500/5 rounded-full blur-3xl animate-pulse" 
+          style={{ animationDelay: '2s', animationDuration: '6s' }}
+        ></div>
       </div>
 
       <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isOpen={sidebarOpen} />
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          isOpen={sidebarOpen} 
+        />
         
         <main className="flex-1 relative">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {renderPage()}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Page transition wrapper */}
+            <div className="animate-fadeIn">
+              {renderPage()}
+            </div>
           </div>
         </main>
       </div>
