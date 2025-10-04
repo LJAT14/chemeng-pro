@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Briefcase, MessageCircle, Users, Code, BarChart, Building2, Coffee, Heart, Lightbulb, Wrench, GraduationCap, TrendingUp } from 'lucide-react';
 import AIInterviewChat from '../components/interview/AIInterviewChat';
 import Card from '../components/shared/Card';
-import { interviewQuestions } from '../data/interviewQuestions';
 
 // Interview modes
 const modes = [
@@ -22,16 +21,27 @@ const modes = [
   }
 ];
 
-// Expanded role categories with more scenarios
+// Helper function to convert simple strings to the format AIInterviewChat expects
+const formatQuestions = (questionStrings, roleId) => {
+  return questionStrings.map((q, index) => ({
+    id: `${roleId}-${index + 1}`,
+    question: {
+      en: q,
+      pt: q // You can add Portuguese translations later
+    },
+    category: 'general'
+  }));
+};
+
+// Role categories with questions as simple strings
 const roles = [
-  // Technical Roles
   {
     id: 'chemical-engineer',
     name: 'Chemical Engineer',
     icon: Building2,
     color: 'from-orange-500 to-red-500',
     category: 'Technical',
-    questions: [
+    questionStrings: [
       "Describe your experience with process design and optimization.",
       "How do you approach troubleshooting a reactor that's not meeting specifications?",
       "Explain the principles of distillation and when you'd use it.",
@@ -50,10 +60,10 @@ const roles = [
     icon: Wrench,
     color: 'from-cyan-500 to-blue-500',
     category: 'Technical',
-    questions: [
+    questionStrings: [
       "How do you optimize existing processes for better efficiency?",
       "Describe your experience with heat exchangers and their design.",
-      "What tools do you use for process flow diagrams (PFDs)?",
+      "What tools do you use for process flow diagrams?",
       "Tell me about a time you reduced production costs.",
       "How do you handle process deviations?",
       "What's your experience with Six Sigma or Lean methodologies?",
@@ -67,14 +77,14 @@ const roles = [
     icon: Code,
     color: 'from-green-500 to-emerald-500',
     category: 'Technical',
-    questions: [
+    questionStrings: [
       "Describe your experience with full-stack development.",
       "How do you approach debugging a complex system issue?",
       "What's your preferred tech stack and why?",
       "Tell me about a time you optimized application performance.",
       "How do you ensure code quality in your projects?",
       "Describe your experience with API design and RESTful services.",
-      "What's your approach to testing (unit, integration, E2E)?",
+      "What's your approach to testing?",
       "How do you stay current with new technologies?",
       "Explain your experience with version control and CI/CD.",
       "How do you handle technical debt?"
@@ -86,7 +96,7 @@ const roles = [
     icon: BarChart,
     color: 'from-blue-500 to-cyan-500',
     category: 'Technical',
-    questions: [
+    questionStrings: [
       "Describe your experience with machine learning models.",
       "How do you handle missing or incomplete data?",
       "What's your approach to feature engineering?",
@@ -99,19 +109,17 @@ const roles = [
       "How do you approach A/B testing?"
     ]
   },
-
-  // Management & Leadership Roles
   {
     id: 'project-manager',
     name: 'Project Manager',
     icon: Users,
     color: 'from-purple-500 to-pink-500',
     category: 'Management',
-    questions: [
+    questionStrings: [
       "How do you prioritize tasks when everything is high priority?",
       "Describe your experience managing cross-functional teams.",
       "How do you handle project delays or setbacks?",
-      "What project management methodologies do you prefer (Agile, Waterfall, etc.)?",
+      "What project management methodologies do you prefer?",
       "Tell me about a difficult stakeholder situation you resolved.",
       "How do you track and report project progress?",
       "Describe your approach to risk management.",
@@ -126,7 +134,7 @@ const roles = [
     icon: Users,
     color: 'from-indigo-500 to-purple-500',
     category: 'Management',
-    questions: [
+    questionStrings: [
       "How do you delegate tasks effectively?",
       "Describe a time you resolved a conflict within your team.",
       "How do you provide constructive feedback?",
@@ -137,15 +145,13 @@ const roles = [
       "What's your leadership style?"
     ]
   },
-
-  // Business Roles
   {
     id: 'business-analyst',
     name: 'Business Analyst',
     icon: Briefcase,
     color: 'from-yellow-500 to-orange-500',
     category: 'Business',
-    questions: [
+    questionStrings: [
       "How do you gather and document requirements?",
       "Describe your experience with process improvement.",
       "How do you handle conflicting stakeholder requirements?",
@@ -164,7 +170,7 @@ const roles = [
     icon: Lightbulb,
     color: 'from-rose-500 to-pink-500',
     category: 'Business',
-    questions: [
+    questionStrings: [
       "How do you prioritize features in a product roadmap?",
       "Describe your experience with user research.",
       "How do you define product success metrics?",
@@ -175,15 +181,13 @@ const roles = [
       "Describe your approach to competitive analysis."
     ]
   },
-
-  // General & Soft Skills
   {
     id: 'general-professional',
     name: 'General Professional',
     icon: MessageCircle,
     color: 'from-gray-500 to-slate-500',
     category: 'General',
-    questions: [
+    questionStrings: [
       "Tell me about yourself and your background.",
       "What are your career goals for the next 5 years?",
       "Why are you interested in this field?",
@@ -202,7 +206,7 @@ const roles = [
     icon: Coffee,
     color: 'from-amber-500 to-yellow-500',
     category: 'General',
-    questions: [
+    questionStrings: [
       "What do you enjoy doing in your free time?",
       "Tell me about a book or article you read recently.",
       "What's something interesting you've learned lately?",
@@ -221,7 +225,7 @@ const roles = [
     icon: Heart,
     color: 'from-pink-500 to-rose-500',
     category: 'General',
-    questions: [
+    questionStrings: [
       "Tell me about a time you had to work with a difficult colleague.",
       "Describe a situation where you had to meet a tight deadline.",
       "How do you handle criticism?",
@@ -240,8 +244,8 @@ const roles = [
     icon: GraduationCap,
     color: 'from-green-500 to-teal-500',
     category: 'General',
-    questions: [
-      "What interests you about this field of study/work?",
+    questionStrings: [
+      "What interests you about this field of study or work?",
       "Describe a challenging course or project you've completed.",
       "How do you balance academics with other activities?",
       "What skills from your studies are you eager to apply?",
@@ -284,6 +288,11 @@ const InterviewSimulator = () => {
 
   // Show interview chat
   if (interviewStarted && selectedRoleData) {
+    // Convert question strings to the format AIInterviewChat expects
+    const formattedQuestions = formatQuestions(selectedRoleData.questionStrings, selectedRoleData.id);
+    
+    console.log('Starting interview with formatted questions:', formattedQuestions);
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-8 px-4">
         <div className="max-w-4xl mx-auto">
@@ -295,7 +304,7 @@ const InterviewSimulator = () => {
           </button>
           
           <AIInterviewChat 
-            questions={selectedRoleData.questions}
+            questions={formattedQuestions}
           />
         </div>
       </div>
@@ -304,7 +313,6 @@ const InterviewSimulator = () => {
 
   // Show role selection
   if (selectedMode) {
-    // Group roles by category
     const groupedRoles = roles.reduce((acc, role) => {
       if (!acc[role.category]) {
         acc[role.category] = [];
@@ -356,7 +364,7 @@ const InterviewSimulator = () => {
                           {role.name}
                         </h3>
                         <p className="text-gray-300 text-sm mb-2">
-                          {role.questions.length} questions
+                          {role.questionStrings.length} questions
                         </p>
                         <p className="text-gray-400 text-xs">
                           Click to start interview
@@ -373,7 +381,7 @@ const InterviewSimulator = () => {
     );
   }
 
-  // Show mode selection (initial screen)
+  // Show mode selection
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-12 px-4">
       <div className="max-w-4xl mx-auto">
