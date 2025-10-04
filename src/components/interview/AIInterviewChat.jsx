@@ -1,135 +1,66 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Mic, MicOff, Volume2, Loader2 } from 'lucide-react';
-import MessageBubble from './MessageBubble';
-import Button from '../shared/Button';
-import useAIChat from '../../hooks/useAIChat';
-import groqWhisperService from '../../services/groqWhisperService';
-import elevenLabsTTS from '../../services/elevenLabsTTS';
+import { Mic, Send, Volume2, StopCircle } from 'lucide-react';
+import { transcribeAudio } from '../../services/groqWhisperService';
+import { useAIChat } from '../../hooks/useAIChat';
 
 const AIInterviewChat = ({ questions }) => {
-  const [inputMessage, setInputMessage] = useState('');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [voiceMode, setVoiceMode] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [buttonPressed, setButtonPressed] = useState(false);
-  const [isCooldown, setIsCooldown] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false); // NEW: AI speaking state
-  const [autoSpeak, setAutoSpeak] = useState(true); // NEW: auto-speak questions
-  const messagesEndRef = useRef(null);
+  const [transcript, setTranscript] = useState('');
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const recordingIntervalRef = useRef(null);
-  const { messages, sendMessage, startInterview, isLoading } = useAIChat(questions);
+  const streamRef = useRef(null);
+  const recordingStartTimeRef = useRef(null);
+  const durationIntervalRef = useRef(null);
 
-  // Auto-speak new AI messages
-  useEffect(() => {
-    if (!autoSpeak || messages.length === 0) return;
-    
-    const lastMessage = messages[messages.length - 1];
-    
-    // Only speak AI messages, not user messages
-    if (lastMessage.role === 'assistant' && !isSpeaking) {
-      speakText(lastMessage.content);
+  const { messages, sendMessage, isLoading } = useAIChat();
+
+  const currentQuestion = questions[currentQuestionIndex];
+
+  // Speak question aloud
+  const speakQuestion = (text) => {
+    if ('speechSynthesis' in window) {
+      setIsSpeaking(true);
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
     }
-  }, [messages, autoSpeak]);
-
-  const speakText = (text) => {
-    // Stop any current speech
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9; // Slightly slower for clarity
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    
-    // Try to use a good English voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => 
-      v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Microsoft'))
-    ) || voices.find(v => v.lang.startsWith('en'));
-    
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
-    
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    
-    window.speechSynthesis.speak(utterance);
   };
 
-  const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  };
-
-  // Check if browser supports audio recording
-  const isAudioSupported = typeof navigator !== 'undefined' && 
-    (navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-
-  const handleRecordButtonPress = async () => {
-    if (isCooldown) {
-      console.log('Still in cooldown period, ignoring press');
-      return;
-    }
-    setButtonPressed(true);
-    await startRecording();
-  };
-
-  const handleRecordButtonRelease = () => {
-    setButtonPressed(false);
-    stopRecording();
-  };
-
+  // Start recording
   const startRecording = async () => {
-    if (isRecording) return; // Already recording
+    console.log('=== START RECORDING ===');
     
     try {
-      console.log('=== START RECORDING ===');
-      
-      // Request high-quality audio
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: 1,
-          sampleRate: 16000,
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      
-      console.log('✓ Microphone access granted');
-      
-      // Use WAV format with PCM - most universally supported
-      // But first try MP4 as it's what Groq prefers
-      let mimeType;
-      const supportedTypes = [
-        'audio/mp4',
-        'audio/mpeg',
-        'audio/webm',
-        'audio/ogg',
-        ''  // Default - let browser decide
-      ];
-      
-      for (const type of supportedTypes) {
-        if (type === '' || MediaRecorder.isTypeSupported(type)) {
-          mimeType = type || undefined;
-          break;
+          sampleRate: 16000
         }
-      }
-      
-      console.log('Using audio format:', mimeType || 'browser default');
-      
-      const mediaRecorder = new MediaRecorder(stream, mimeType ? { 
-        mimeType,
-        audioBitsPerSecond: 128000
-      } : {
-        audioBitsPerSecond: 128000
       });
-      mediaRecorderRef.current = mediaRecorder;
+
+      console.log('✓ Microphone access granted');
+      streamRef.current = stream;
       audioChunksRef.current = [];
+
+      // Determine best audio format
+      let mimeType = 'audio/webm;codecs=opus';
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+      }
+
+      console.log('Using audio format:', mimeType);
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -139,375 +70,240 @@ const AIInterviewChat = ({ questions }) => {
       };
 
       mediaRecorder.onstop = async () => {
+        const duration = recordingDuration;
+        console.log(`Stopping recording after ${duration} seconds`);
+
+        // Stop duration tracker
+        if (durationIntervalRef.current) {
+          clearInterval(durationIntervalRef.current);
+          durationIntervalRef.current = null;
+        }
+
+        if (audioChunksRef.current.length === 0) {
+          console.log('No audio chunks were collected!');
+          setTranscript('');
+          alert('No audio recorded. Please try again and speak clearly.');
+          return;
+        }
+
         console.log('MediaRecorder stopped');
         console.log('Total chunks collected:', audioChunksRef.current.length);
-        
-        if (audioChunksRef.current.length === 0) {
-          console.error('No audio chunks were collected!');
-          stream.getTracks().forEach(track => track.stop());
-          alert('Recording failed - no audio data collected. Your browser may not support audio recording. Try using Chrome or Edge.');
-          return;
-        }
-        
-        // Get the actual mime type used
-        const actualMimeType = mimeType || mediaRecorder.mimeType;
-        console.log('Creating blob with type:', actualMimeType);
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('Creating blob with type:', mimeType);
         console.log('Final audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
-        
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
-        
-        // Check duration - if too short, likely just noise/silence
-        if (recordingTime < 1) {
-          console.warn('Recording too short:', recordingTime, 'seconds');
+
+        // Check minimum duration (2 seconds)
+        if (duration < 2) {
+          console.log('Recording too short:', duration, 'seconds');
           alert('Recording too short. Please hold the button and speak for at least 2 seconds.');
-          setIsCooldown(false); // Release cooldown immediately
+          setTranscript('');
           return;
         }
-        
-        // Only transcribe if we have actual audio data
-        if (audioBlob.size < 2000) { // Increased minimum size
-          console.error('Audio blob too small:', audioBlob.size, 'bytes');
-          alert('No speech detected. Please speak clearly into your microphone.');
-          setIsCooldown(false); // Release cooldown immediately
+
+        // Check minimum file size
+        if (audioBlob.size < 2000) {
+          console.log('Audio blob too small:', audioBlob.size, 'bytes');
+          alert('No speech detected. Please speak louder and try again.');
+          setTranscript('');
           return;
         }
-        
-        // Transcribe using Groq Whisper
-        await transcribeAudio(audioBlob);
+
+        // Transcribe
+        try {
+          console.log('=== PREPARING AUDIO FOR GROQ ===');
+          const transcribedText = await transcribeAudio(audioBlob);
+          console.log('=== TRANSCRIPTION RESULT ===');
+          console.log('Text:', transcribedText);
+          setTranscript(transcribedText);
+        } catch (error) {
+          console.error('Transcription error:', error);
+          alert(`Transcription failed: ${error.message}`);
+          setTranscript('');
+        }
+
+        // Clean up stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
       };
 
-      // Record in chunks for better reliability
-      mediaRecorder.start(1000); // Capture data every 1 second
-      setIsRecording(true);
-      setRecordingTime(0);
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start(1000); // Collect data every second
       
-      // Start timer
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
+      // Start recording time tracker
+      recordingStartTimeRef.current = Date.now();
+      setRecordingDuration(0);
+      
+      durationIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - recordingStartTimeRef.current) / 1000);
+        setRecordingDuration(elapsed);
+      }, 100);
 
+      setIsRecording(true);
       console.log('Recording started');
+
     } catch (error) {
-      console.error('Failed to start recording:', error);
-      alert('Could not access microphone. Please allow microphone access.');
+      console.error('Microphone access error:', error);
+      alert('Could not access microphone. Please grant permission and try again.');
     }
   };
 
+  // Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      console.log('Stopping recording after', recordingTime, 'seconds');
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      clearInterval(recordingIntervalRef.current);
     }
   };
 
-  const transcribeAudio = async (audioBlob) => {
-    setIsTranscribing(true);
-    setIsCooldown(true); // Start cooldown
-    
-    try {
-      console.log('=== TRANSCRIPTION START ===');
-      console.log('Audio size:', audioBlob.size, 'bytes');
-      console.log('Audio type:', audioBlob.type);
-      console.log('Recording duration was:', recordingTime, 'seconds');
-      
-      const transcription = await groqWhisperService.transcribeAudio(audioBlob);
-      
-      console.log('=== TRANSCRIPTION RESULT ===');
-      console.log('Text:', transcription);
-      console.log('Length:', transcription.length, 'characters');
-      
-      if (transcription && transcription.trim().length > 0) {
-        setInputMessage(transcription);
-      } else {
-        console.error('Empty transcription received');
-        alert('No speech detected. Please speak clearly and try again.');
-      }
-    } catch (error) {
-      console.error('=== TRANSCRIPTION ERROR ===');
-      console.error(error);
-      alert(`Transcription failed: ${error.message}. Please try again.`);
-    } finally {
-      setIsTranscribing(false);
-      
-      // Release cooldown after 3 seconds
-      setTimeout(() => {
-        setIsCooldown(false);
-        console.log('Cooldown released - ready to record again');
-      }, 3000);
-    }
-  };
-
-  const handleSend = async () => {
-    const textToSend = inputMessage.trim();
-    
-    if (!textToSend || isLoading || isTranscribing) {
+  // Send answer to AI
+  const handleSendAnswer = async () => {
+    if (!transcript.trim()) {
+      alert('Please record your answer first.');
       return;
     }
 
-    await sendMessage(textToSend);
-    setInputMessage('');
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+    const questionText = currentQuestion.question.en;
+    await sendMessage(`Question: ${questionText}\n\nMy Answer: ${transcript}`);
+    
+    // Move to next question or finish
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setTranscript('');
+    } else {
+      alert('Interview complete! Great job!');
     }
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+      }
+      window.speechSynthesis.cancel();
+    };
+  }, []);
 
-  if (messages.length === 0) {
+  if (!currentQuestion) {
     return (
-      <div className="text-center py-12">
-        <h2 className="text-3xl font-bold mb-4">AI Interview Simulator</h2>
-        <p className="text-slate-400 mb-8">Practice with voice or text - Get real AI feedback from Groq</p>
-        
-        {isAudioSupported && (
-          <div className="flex flex-col items-center space-y-4 mb-6">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={voiceMode}
-                onChange={(e) => setVoiceMode(e.target.checked)}
-                className="w-4 h-4 accent-purple-500"
-              />
-              <span className="text-slate-300">Enable Voice Mode</span>
-            </label>
-            
-            {voiceMode && (
-              <div className="text-xs text-slate-500 space-y-1 text-center">
-                <p>✓ Voice recording ready (works on mobile!)</p>
-                <p>Hold mic button to record, release to transcribe</p>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {!isAudioSupported && (
-          <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg max-w-md mx-auto">
-            <p className="text-yellow-400 text-sm font-semibold mb-2">Voice Not Available</p>
-            <p className="text-slate-300 text-sm">
-              Your browser doesn't support audio recording. You can still type your answers!
-            </p>
-          </div>
-        )}
-        
-        <Button onClick={startInterview}>Start Interview</Button>
+      <div className="text-white text-center p-8">
+        <h2 className="text-2xl font-bold mb-4">No questions available</h2>
+        <p>Please select an interview scenario to begin.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {voiceMode && (
-        <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-800">
-          <div className="flex items-center space-x-3">
-            <Volume2 className={`w-5 h-5 ${isSpeaking ? 'text-green-400 animate-pulse' : 'text-purple-400'}`} />
-            <div>
-              <span className="text-sm font-medium block">Voice Mode Active</span>
-              {isSpeaking && <span className="text-xs text-green-400">🔊 AI Speaking...</span>}
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            {isSpeaking && (
-              <button
-                onClick={stopSpeaking}
-                className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-xs font-medium transition-colors"
-              >
-                Stop Speaking
-              </button>
+    <div className="bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
+      {/* Question Card */}
+      <div className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/30 rounded-lg p-6 mb-6">
+        <div className="flex items-start justify-between mb-4">
+          <h3 className="text-white font-semibold text-lg">
+            Question {currentQuestionIndex + 1} of {questions.length}
+          </h3>
+          <button
+            onClick={() => speakQuestion(currentQuestion.question.en)}
+            disabled={isSpeaking}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg flex items-center gap-2 text-sm"
+          >
+            <Volume2 className="w-4 h-4" />
+            {isSpeaking ? 'Speaking...' : 'Listen'}
+          </button>
+        </div>
+        <p className="text-white text-xl leading-relaxed">
+          {currentQuestion.question.en}
+        </p>
+      </div>
+
+      {/* Recording Controls */}
+      <div className="mb-6">
+        <div className="flex gap-3 mb-4">
+          <button
+            onMouseDown={startRecording}
+            onMouseUp={stopRecording}
+            onTouchStart={startRecording}
+            onTouchEnd={stopRecording}
+            disabled={isLoading}
+            className={`flex-1 py-4 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-3 ${
+              isRecording
+                ? 'bg-red-600 scale-95 shadow-lg shadow-red-500/50'
+                : 'bg-purple-600 hover:bg-purple-700'
+            } text-white disabled:bg-gray-600 disabled:cursor-not-allowed`}
+            style={{ touchAction: 'none' }}
+          >
+            {isRecording ? (
+              <>
+                <StopCircle className="w-6 h-6 animate-pulse" />
+                <span>Release to Stop ({recordingDuration}s)</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-6 h-6" />
+                <span>Hold to Record</span>
+              </>
             )}
-            <label className="text-xs text-slate-400 flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={autoSpeak}
-                onChange={(e) => setAutoSpeak(e.target.checked)}
-                className="w-3 h-3 accent-purple-500"
-              />
-              <span>Auto-speak</span>
-            </label>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={voiceMode}
-                onChange={(e) => setVoiceMode(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-            </label>
+          </button>
+
+          {transcript && !isRecording && (
+            <button
+              onClick={handleSendAnswer}
+              disabled={isLoading}
+              className="px-6 py-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg flex items-center gap-2 font-semibold"
+            >
+              <Send className="w-5 h-5" />
+              Send Answer
+            </button>
+          )}
+        </div>
+
+        {isRecording && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-red-200 font-semibold">
+                Recording... {recordingDuration} seconds
+              </span>
+            </div>
+            <p className="text-red-200/70 text-sm mt-2">
+              Speak clearly. Release button when done.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Transcript Display */}
+      {transcript && (
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-6">
+          <h4 className="text-blue-200 font-semibold mb-2">Your Answer:</h4>
+          <p className="text-white leading-relaxed">{transcript}</p>
+          <p className="text-blue-200/60 text-sm mt-2">
+            {transcript.split(' ').length} words, {transcript.length} characters
+          </p>
+        </div>
+      )}
+
+      {/* AI Feedback */}
+      {messages.length > 0 && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+          <h4 className="text-green-200 font-semibold mb-2">AI Feedback:</h4>
+          <div className="text-white leading-relaxed">
+            {messages[messages.length - 1].content}
           </div>
         </div>
       )}
 
-      <div className="flex flex-col h-[600px] bg-slate-900/50 rounded-2xl border border-slate-800">
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {messages.map((message, index) => (
-            <MessageBubble key={index} message={message} />
-          ))}
-          
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="flex items-center space-x-2 px-4 py-3 bg-slate-800 rounded-2xl">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-                <span className="text-sm text-slate-400">AI analyzing...</span>
-              </div>
-            </div>
-          )}
-          
-          {isTranscribing && (
-            <div className="flex justify-start">
-              <div className="flex items-center space-x-2 px-4 py-3 bg-blue-500/20 border border-blue-500/30 rounded-2xl">
-                <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                <span className="text-sm text-blue-400">Transcribing your speech...</span>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
+      {isLoading && (
+        <div className="text-center py-4">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-purple-500 border-t-transparent"></div>
+          <p className="text-gray-300 mt-2">AI is analyzing your answer...</p>
         </div>
-
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex space-x-3 items-end">
-            <textarea
-              id="interview-answer"
-              name="answer"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={isRecording ? "🎤 Recording your voice..." : isTranscribing ? "⏳ Transcribing..." : "Type your answer or hold mic button to speak..."}
-              className={`flex-1 px-4 py-3 bg-slate-800 border rounded-lg focus:outline-none focus:border-purple-500 resize-none transition-all ${
-                isRecording ? 'border-red-500 shadow-lg shadow-red-500/20' : 'border-slate-700'
-              }`}
-              rows={3}
-              disabled={isLoading || isTranscribing || isRecording}
-              autoComplete="off"
-            />
-            
-            {voiceMode && isAudioSupported && (
-              <button
-                onMouseDown={handleRecordButtonPress}
-                onMouseUp={handleRecordButtonRelease}
-                onMouseLeave={handleRecordButtonRelease}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleRecordButtonPress();
-                }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  handleRecordButtonRelease();
-                }}
-                onTouchCancel={handleRecordButtonRelease}
-                disabled={isLoading || isTranscribing || isCooldown}
-                className={`px-6 py-6 rounded-xl transition-all flex flex-col items-center justify-center min-w-[80px] ${
-                  isCooldown
-                    ? 'bg-slate-700 cursor-wait'
-                    : buttonPressed || isRecording
-                    ? 'bg-red-600 shadow-2xl shadow-red-500/50 scale-95' 
-                    : 'bg-gradient-to-br from-purple-500 to-purple-700 hover:shadow-xl hover:scale-105'
-                } disabled:opacity-50`}
-                style={{ touchAction: 'none' }}
-              >
-                {isCooldown ? (
-                  <>
-                    <Loader2 className="w-7 h-7 mb-1 animate-spin" />
-                    <span className="text-xs font-bold">WAIT</span>
-                  </>
-                ) : isRecording ? (
-                  <>
-                    <MicOff className="w-7 h-7 mb-1" />
-                    <span className="text-xs font-bold">RELEASE</span>
-                  </>
-                ) : (
-                  <>
-                    <Mic className="w-7 h-7 mb-1" />
-                    <span className="text-xs font-bold">HOLD</span>
-                  </>
-                )}
-              </button>
-            )}
-            
-            <button 
-              onClick={handleSend}
-              disabled={!inputMessage.trim() || isLoading || isTranscribing || isRecording}
-              className="px-6 py-6 bg-gradient-to-r from-blue-500 to-blue-700 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl hover:scale-105 transition-all"
-            >
-              <Send className="w-6 h-6" />
-            </button>
-          </div>
-          
-          {isRecording && (
-            <div className="mt-3 text-center space-y-3 bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-              <div className="flex items-center justify-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-1 h-8 bg-red-500 rounded-full animate-pulse"></div>
-                  <div className="w-1 h-12 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-1 h-10 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-1 h-14 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                  <div className="w-1 h-16 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-                  <div className="w-1 h-12 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                  <div className="w-1 h-10 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                </div>
-              </div>
-              <div>
-                <p className="text-3xl text-red-400 font-bold tabular-nums">
-                  {formatTime(recordingTime)}
-                </p>
-                <p className="text-sm text-red-300 font-medium mt-1">
-                  🎤 RECORDING
-                </p>
-              </div>
-              <p className="text-xs text-slate-300">
-                Keep speaking clearly... Release button when finished
-              </p>
-            </div>
-          )}
-          
-          {isTranscribing && (
-            <div className="mt-3 text-center p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <div className="flex items-center justify-center space-x-2 mb-2">
-                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
-                <p className="text-blue-400 font-semibold">Processing Your Speech...</p>
-              </div>
-              <p className="text-xs text-slate-400">
-                Groq Whisper AI is transcribing your audio
-              </p>
-            </div>
-          )}
-          
-          {isCooldown && !isTranscribing && (
-            <div className="mt-3 text-center p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-              <p className="text-sm text-slate-400">
-                ⏳ Preparing microphone... Ready in 3 seconds
-              </p>
-            </div>
-          )}
-          
-          {inputMessage && !isRecording && !isTranscribing && !isCooldown && (
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-xs text-slate-500">
-                {inputMessage.split(' ').filter(w => w).length} words • {inputMessage.length} characters
-              </p>
-              <p className="text-xs text-green-400 font-medium">
-                ✓ Ready to send
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
