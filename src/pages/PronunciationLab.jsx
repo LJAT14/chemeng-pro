@@ -3,238 +3,57 @@ import { Mic, Volume2, CheckCircle, XCircle, TrendingUp, Award } from 'lucide-re
 import Card from '../components/shared/Card';
 import { transcribeAudio } from '../services/groqWhisperService';
 
-// Expanded pronunciation words with phonetics
 const pronunciationWords = [
-  // Beginner (5)
-  { 
-    id: 1, 
-    word: 'Thermodynamics', 
-    phonetic: '/ˌθɜːrmoʊdaɪˈnæmɪks/', 
-    difficulty: 'beginner',
-    category: 'Chemistry',
-    tip: 'Break it down: THER-mo-dy-NAM-ics. Stress on "nam".',
-    acceptableVariations: ['thermodynamics', 'thermo dynamics']
-  },
-  { 
-    id: 2, 
-    word: 'Catalyst', 
-    phonetic: '/ˈkætəlɪst/', 
-    difficulty: 'beginner',
-    category: 'Chemistry',
-    tip: 'CAT-a-list. Stress on first syllable.',
-    acceptableVariations: ['catalyst', 'cata list']
-  },
-  { 
-    id: 3, 
-    word: 'Molecule', 
-    phonetic: '/ˈmɒlɪkjuːl/', 
-    difficulty: 'beginner',
-    category: 'Chemistry',
-    tip: 'MOL-eh-kyool. Three syllables.',
-    acceptableVariations: ['molecule', 'molly cule']
-  },
-  { 
-    id: 4, 
-    word: 'Algorithm', 
-    phonetic: '/ˈælɡərɪðəm/', 
-    difficulty: 'beginner',
-    category: 'Technology',
-    tip: 'AL-go-rith-um. Stress on first syllable.',
-    acceptableVariations: ['algorithm', 'algo rhythm']
-  },
-  { 
-    id: 5, 
-    word: 'Efficiency', 
-    phonetic: '/ɪˈfɪʃənsi/', 
-    difficulty: 'beginner',
-    category: 'Engineering',
-    tip: 'ef-FISH-en-see. Stress on second syllable.',
-    acceptableVariations: ['efficiency', 'a fish in sea']
-  },
-
-  // Intermediate (10)
-  { 
-    id: 6, 
-    word: 'Stoichiometry', 
-    phonetic: '/ˌstɔɪkiˈɒmətri/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'stoy-key-OM-eh-tree. Watch the "ch" sound.',
-    acceptableVariations: ['stoichiometry', 'stoichio metry']
-  },
-  { 
-    id: 7, 
-    word: 'Heterogeneous', 
-    phonetic: '/ˌhetərəˈdʒiːniəs/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'het-er-oh-JEE-nee-us. Five syllables.',
-    acceptableVariations: ['heterogeneous', 'hetero genius']
-  },
-  { 
-    id: 8, 
-    word: 'Precipitation', 
-    phonetic: '/prɪˌsɪpɪˈteɪʃən/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'pre-sip-ih-TAY-shun. Stress on fourth syllable.',
-    acceptableVariations: ['precipitation', 'precipi tation']
-  },
-  { 
-    id: 9, 
-    word: 'Viscosity', 
-    phonetic: '/vɪsˈkɒsəti/', 
-    difficulty: 'intermediate',
-    category: 'Engineering',
-    tip: 'vis-KOS-ih-tee. Stress on second syllable.',
-    acceptableVariations: ['viscosity', 'vis cosity']
-  },
-  { 
-    id: 10, 
-    word: 'Equilibrium', 
-    phonetic: '/ˌiːkwɪˈlɪbriəm/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'ee-kwi-LIB-ree-um. Stress on third syllable.',
-    acceptableVariations: ['equilibrium', 'equilibri um']
-  },
-  { 
-    id: 11, 
-    word: 'Pharmaceutical', 
-    phonetic: '/ˌfɑːrməˈsuːtɪkəl/', 
-    difficulty: 'intermediate',
-    category: 'Medicine',
-    tip: 'far-ma-SOO-tih-kul. Watch the "ceu" sound.',
-    acceptableVariations: ['pharmaceutical', 'pharma suit tical']
-  },
-  { 
-    id: 12, 
-    word: 'Chromatography', 
-    phonetic: '/ˌkroʊməˈtɒɡrəfi/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'kro-ma-TOG-ra-fee. Silent "h" at start.',
-    acceptableVariations: ['chromatography', 'chroma tography']
-  },
-  { 
-    id: 13, 
-    word: 'Polymerization', 
-    phonetic: '/pəˌlɪmərəˈzeɪʃən/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'puh-lim-er-ih-ZAY-shun. Six syllables.',
-    acceptableVariations: ['polymerization', 'polymer ization']
-  },
-  { 
-    id: 14, 
-    word: 'Sustainability', 
-    phonetic: '/səˌsteɪnəˈbɪləti/', 
-    difficulty: 'intermediate',
-    category: 'Engineering',
-    tip: 'sus-tay-na-BIL-ih-tee. Stress on fourth syllable.',
-    acceptableVariations: ['sustainability', 'sustain ability']
-  },
-  { 
-    id: 15, 
-    word: 'Spectroscopy', 
-    phonetic: '/spekˈtrɒskəpi/', 
-    difficulty: 'intermediate',
-    category: 'Chemistry',
-    tip: 'spek-TROS-ko-pee. Stress on second syllable.',
-    acceptableVariations: ['spectroscopy', 'spectro scopy']
-  },
-
-  // Advanced (10)
-  { 
-    id: 16, 
-    word: 'Endothermic', 
-    phonetic: '/ˌendoʊˈθɜːrmɪk/', 
-    difficulty: 'advanced',
-    category: 'Chemistry',
-    tip: 'en-doh-THER-mik. "th" like in "think".',
-    acceptableVariations: ['endothermic', 'endo thermic']
-  },
-  { 
-    id: 17, 
-    word: 'Exothermic', 
-    phonetic: '/ˌeksoʊˈθɜːrmɪk/', 
-    difficulty: 'advanced',
-    category: 'Chemistry',
-    tip: 'ek-soh-THER-mik. Compare with endothermic.',
-    acceptableVariations: ['exothermic', 'exo thermic']
-  },
-  { 
-    id: 18, 
-    word: 'Electrochemistry', 
-    phonetic: '/ɪˌlektroʊˈkemɪstri/', 
-    difficulty: 'advanced',
-    category: 'Chemistry',
-    tip: 'ee-lek-troh-KEM-is-tree. Seven syllables.',
-    acceptableVariations: ['electrochemistry', 'electro chemistry']
-  },
-  { 
-    id: 19, 
-    word: 'Nanotechnology', 
-    phonetic: '/ˌnænoʊtekˈnɒlədʒi/', 
-    difficulty: 'advanced',
-    category: 'Technology',
-    tip: 'nan-oh-tek-NOL-oh-jee. Watch the stress.',
-    acceptableVariations: ['nanotechnology', 'nano technology']
-  },
-  { 
-    id: 20, 
-    word: 'Biodegradable', 
-    phonetic: '/ˌbaɪoʊdɪˈɡreɪdəbəl/', 
-    difficulty: 'advanced',
-    category: 'Engineering',
-    tip: 'by-oh-dih-GRAY-da-bul. Five syllables.',
-    acceptableVariations: ['biodegradable', 'bio degradable']
-  },
-  { 
-    id: 21, 
-    word: 'Crystallization', 
-    phonetic: '/ˌkrɪstəlaɪˈzeɪʃən/', 
-    difficulty: 'advanced',
-    category: 'Chemistry',
-    tip: 'kris-tal-ih-ZAY-shun. Six syllables.',
-    acceptableVariations: ['crystallization', 'crystal ization']
-  },
-  { 
-    id: 22, 
-    word: 'Turbulence', 
-    phonetic: '/ˈtɜːrbjələns/', 
-    difficulty: 'advanced',
-    category: 'Engineering',
-    tip: 'TUR-byoo-lence. Stress on first syllable.',
-    acceptableVariations: ['turbulence', 'turbu lence']
-  },
-  { 
-    id: 23, 
-    word: 'Semiconductor', 
-    phonetic: '/ˌsemikənˈdʌktər/', 
-    difficulty: 'advanced',
-    category: 'Technology',
-    tip: 'sem-ee-kon-DUK-ter. Stress on fourth syllable.',
-    acceptableVariations: ['semiconductor', 'semi conductor']
-  },
-  { 
-    id: 24, 
-    word: 'Photosynthesis', 
-    phonetic: '/ˌfoʊtoʊˈsɪnθəsɪs/', 
-    difficulty: 'advanced',
-    category: 'Biology',
-    tip: 'foh-toh-SIN-thuh-sis. Five syllables.',
-    acceptableVariations: ['photosynthesis', 'photo synthesis']
-  },
-  { 
-    id: 25, 
-    word: 'Electromagnetic', 
-    phonetic: '/ɪˌlektroʊmæɡˈnetɪk/', 
-    difficulty: 'advanced',
-    category: 'Physics',
-    tip: 'ee-lek-troh-mag-NET-ik. Six syllables.',
-    acceptableVariations: ['electromagnetic', 'electro magnetic']
-  }
+  { id: 1, word: 'Thermodynamics', phonetic: '/ˌθɜːrmoʊdaɪˈnæmɪks/', difficulty: 'beginner', category: 'Chemistry', tip: 'THER-mo-dy-NAM-ics. Stress on "nam".', acceptableVariations: ['thermodynamics'] },
+  { id: 2, word: 'Catalyst', phonetic: '/ˈkætəlɪst/', difficulty: 'beginner', category: 'Chemistry', tip: 'CAT-a-list. Stress on first syllable.', acceptableVariations: ['catalyst'] },
+  { id: 3, word: 'Molecule', phonetic: '/ˈmɒlɪkjuːl/', difficulty: 'beginner', category: 'Chemistry', tip: 'MOL-eh-kyool. Three syllables.', acceptableVariations: ['molecule'] },
+  { id: 4, word: 'Algorithm', phonetic: '/ˈælɡərɪðəm/', difficulty: 'beginner', category: 'Technology', tip: 'AL-go-rith-um. Stress on first syllable.', acceptableVariations: ['algorithm'] },
+  { id: 5, word: 'Efficiency', phonetic: '/ɪˈfɪʃənsi/', difficulty: 'beginner', category: 'Engineering', tip: 'ef-FISH-en-see. Stress on second syllable.', acceptableVariations: ['efficiency'] },
+  { id: 6, word: 'Laboratory', phonetic: '/ˈlæbrətɔːri/', difficulty: 'beginner', category: 'Science', tip: 'LAB-ra-tor-ee. Four syllables.', acceptableVariations: ['laboratory'] },
+  { id: 7, word: 'Temperature', phonetic: '/ˈtemprətʃər/', difficulty: 'beginner', category: 'Physics', tip: 'TEM-per-a-chur. Stress on first syllable.', acceptableVariations: ['temperature'] },
+  { id: 8, word: 'Hydrogen', phonetic: '/ˈhaɪdrədʒən/', difficulty: 'beginner', category: 'Chemistry', tip: 'HY-dro-jen. Three syllables.', acceptableVariations: ['hydrogen'] },
+  { id: 9, word: 'Analysis', phonetic: '/əˈnæləsɪs/', difficulty: 'beginner', category: 'Science', tip: 'a-NAL-i-sis. Stress on second syllable.', acceptableVariations: ['analysis'] },
+  { id: 10, word: 'Equipment', phonetic: '/ɪˈkwɪpmənt/', difficulty: 'beginner', category: 'Engineering', tip: 'e-KWIP-ment. Three syllables.', acceptableVariations: ['equipment'] },
+  { id: 11, word: 'Stoichiometry', phonetic: '/ˌstɔɪkiˈɒmətri/', difficulty: 'intermediate', category: 'Chemistry', tip: 'stoy-key-OM-eh-tree.', acceptableVariations: ['stoichiometry'] },
+  { id: 12, word: 'Heterogeneous', phonetic: '/ˌhetərəˈdʒiːniəs/', difficulty: 'intermediate', category: 'Chemistry', tip: 'het-er-oh-JEE-nee-us.', acceptableVariations: ['heterogeneous'] },
+  { id: 13, word: 'Precipitation', phonetic: '/prɪˌsɪpɪˈteɪʃən/', difficulty: 'intermediate', category: 'Chemistry', tip: 'pre-sip-ih-TAY-shun.', acceptableVariations: ['precipitation'] },
+  { id: 14, word: 'Viscosity', phonetic: '/vɪsˈkɒsəti/', difficulty: 'intermediate', category: 'Engineering', tip: 'vis-KOS-ih-tee.', acceptableVariations: ['viscosity'] },
+  { id: 15, word: 'Equilibrium', phonetic: '/ˌiːkwɪˈlɪbriəm/', difficulty: 'intermediate', category: 'Chemistry', tip: 'ee-kwi-LIB-ree-um.', acceptableVariations: ['equilibrium'] },
+  { id: 16, word: 'Pharmaceutical', phonetic: '/ˌfɑːrməˈsuːtɪkəl/', difficulty: 'intermediate', category: 'Medicine', tip: 'far-ma-SOO-tih-kul.', acceptableVariations: ['pharmaceutical'] },
+  { id: 17, word: 'Chromatography', phonetic: '/ˌkroʊməˈtɒɡrəfi/', difficulty: 'intermediate', category: 'Chemistry', tip: 'kro-ma-TOG-ra-fee.', acceptableVariations: ['chromatography'] },
+  { id: 18, word: 'Polymerization', phonetic: '/pəˌlɪmərəˈzeɪʃən/', difficulty: 'intermediate', category: 'Chemistry', tip: 'puh-lim-er-ih-ZAY-shun.', acceptableVariations: ['polymerization'] },
+  { id: 19, word: 'Sustainability', phonetic: '/səˌsteɪnəˈbɪləti/', difficulty: 'intermediate', category: 'Engineering', tip: 'sus-tay-na-BIL-ih-tee.', acceptableVariations: ['sustainability'] },
+  { id: 20, word: 'Spectroscopy', phonetic: '/spekˈtrɒskəpi/', difficulty: 'intermediate', category: 'Chemistry', tip: 'spek-TROS-ko-pee.', acceptableVariations: ['spectroscopy'] },
+  { id: 21, word: 'Conductivity', phonetic: '/ˌkɒndʌkˈtɪvəti/', difficulty: 'intermediate', category: 'Physics', tip: 'kon-duk-TIV-ih-tee.', acceptableVariations: ['conductivity'] },
+  { id: 22, word: 'Fermentation', phonetic: '/ˌfɜːrmenˈteɪʃən/', difficulty: 'intermediate', category: 'Biology', tip: 'fer-men-TAY-shun.', acceptableVariations: ['fermentation'] },
+  { id: 23, word: 'Synthesis', phonetic: '/ˈsɪnθəsɪs/', difficulty: 'intermediate', category: 'Chemistry', tip: 'SIN-thuh-sis.', acceptableVariations: ['synthesis'] },
+  { id: 24, word: 'Coefficient', phonetic: '/ˌkoʊɪˈfɪʃənt/', difficulty: 'intermediate', category: 'Math', tip: 'ko-ih-FISH-ent.', acceptableVariations: ['coefficient'] },
+  { id: 25, word: 'Thermometer', phonetic: '/θərˈmɒmɪtər/', difficulty: 'intermediate', category: 'Science', tip: 'thur-MOM-ih-ter.', acceptableVariations: ['thermometer'] },
+  { id: 26, word: 'Reservoir', phonetic: '/ˈrezərvwɑːr/', difficulty: 'intermediate', category: 'Engineering', tip: 'REZ-er-vwar.', acceptableVariations: ['reservoir'] },
+  { id: 27, word: 'Combustion', phonetic: '/kəmˈbʌstʃən/', difficulty: 'intermediate', category: 'Chemistry', tip: 'kum-BUS-chun.', acceptableVariations: ['combustion'] },
+  { id: 28, word: 'Evaporation', phonetic: '/ɪˌvæpəˈreɪʃən/', difficulty: 'intermediate', category: 'Chemistry', tip: 'ee-vap-or-AY-shun.', acceptableVariations: ['evaporation'] },
+  { id: 29, word: 'Contamination', phonetic: '/kənˌtæmɪˈneɪʃən/', difficulty: 'intermediate', category: 'Safety', tip: 'kon-tam-ih-NAY-shun.', acceptableVariations: ['contamination'] },
+  { id: 30, word: 'Metallurgy', phonetic: '/ˈmetələrdʒi/', difficulty: 'intermediate', category: 'Engineering', tip: 'MET-al-ur-jee.', acceptableVariations: ['metallurgy'] },
+  { id: 31, word: 'Endothermic', phonetic: '/ˌendoʊˈθɜːrmɪk/', difficulty: 'advanced', category: 'Chemistry', tip: 'en-doh-THER-mik.', acceptableVariations: ['endothermic'] },
+  { id: 32, word: 'Exothermic', phonetic: '/ˌeksoʊˈθɜːrmɪk/', difficulty: 'advanced', category: 'Chemistry', tip: 'ek-soh-THER-mik.', acceptableVariations: ['exothermic'] },
+  { id: 33, word: 'Electrochemistry', phonetic: '/ɪˌlektroʊˈkemɪstri/', difficulty: 'advanced', category: 'Chemistry', tip: 'ee-lek-troh-KEM-is-tree.', acceptableVariations: ['electrochemistry'] },
+  { id: 34, word: 'Nanotechnology', phonetic: '/ˌnænoʊtekˈnɒlədʒi/', difficulty: 'advanced', category: 'Technology', tip: 'nan-oh-tek-NOL-oh-jee.', acceptableVariations: ['nanotechnology'] },
+  { id: 35, word: 'Biodegradable', phonetic: '/ˌbaɪoʊdɪˈɡreɪdəbəl/', difficulty: 'advanced', category: 'Engineering', tip: 'by-oh-dih-GRAY-da-bul.', acceptableVariations: ['biodegradable'] },
+  { id: 36, word: 'Crystallization', phonetic: '/ˌkrɪstəlaɪˈzeɪʃən/', difficulty: 'advanced', category: 'Chemistry', tip: 'kris-tal-ih-ZAY-shun.', acceptableVariations: ['crystallization'] },
+  { id: 37, word: 'Turbulence', phonetic: '/ˈtɜːrbjələns/', difficulty: 'advanced', category: 'Engineering', tip: 'TUR-byoo-lence.', acceptableVariations: ['turbulence'] },
+  { id: 38, word: 'Semiconductor', phonetic: '/ˌsemikənˈdʌktər/', difficulty: 'advanced', category: 'Technology', tip: 'sem-ee-kon-DUK-ter.', acceptableVariations: ['semiconductor'] },
+  { id: 39, word: 'Photosynthesis', phonetic: '/ˌfoʊtoʊˈsɪnθəsɪs/', difficulty: 'advanced', category: 'Biology', tip: 'foh-toh-SIN-thuh-sis.', acceptableVariations: ['photosynthesis'] },
+  { id: 40, word: 'Electromagnetic', phonetic: '/ɪˌlektroʊmæɡˈnetɪk/', difficulty: 'advanced', category: 'Physics', tip: 'ee-lek-troh-mag-NET-ik.', acceptableVariations: ['electromagnetic'] },
+  { id: 41, word: 'Centrifugal', phonetic: '/senˈtrɪfjəɡəl/', difficulty: 'advanced', category: 'Physics', tip: 'sen-TRIF-you-gul.', acceptableVariations: ['centrifugal'] },
+  { id: 42, word: 'Hydrolysis', phonetic: '/haɪˈdrɒləsɪs/', difficulty: 'advanced', category: 'Chemistry', tip: 'hy-DROL-ih-sis.', acceptableVariations: ['hydrolysis'] },
+  { id: 43, word: 'Anisotropic', phonetic: '/ˌænaɪsəˈtrɒpɪk/', difficulty: 'advanced', category: 'Physics', tip: 'an-eye-so-TROP-ik.', acceptableVariations: ['anisotropic'] },
+  { id: 44, word: 'Nomenclature', phonetic: '/ˈnoʊmənkleɪtʃər/', difficulty: 'advanced', category: 'Chemistry', tip: 'NO-men-klay-chur.', acceptableVariations: ['nomenclature'] },
+  { id: 45, word: 'Stereoisomer', phonetic: '/ˌsterioʊˈaɪsəmər/', difficulty: 'advanced', category: 'Chemistry', tip: 'steer-ee-oh-EYE-so-mer.', acceptableVariations: ['stereoisomer'] },
+  { id: 46, word: 'Rheology', phonetic: '/riˈɒlədʒi/', difficulty: 'advanced', category: 'Engineering', tip: 'ree-OL-oh-jee.', acceptableVariations: ['rheology'] },
+  { id: 47, word: 'Titration', phonetic: '/taɪˈtreɪʃən/', difficulty: 'advanced', category: 'Chemistry', tip: 'ty-TRAY-shun.', acceptableVariations: ['titration'] },
+  { id: 48, word: 'Supercritical', phonetic: '/ˌsuːpəˈkrɪtɪkəl/', difficulty: 'advanced', category: 'Chemistry', tip: 'soo-per-KRIT-ih-kul.', acceptableVariations: ['supercritical'] },
+  { id: 49, word: 'Pyrolysis', phonetic: '/paɪˈrɒləsɪs/', difficulty: 'advanced', category: 'Chemistry', tip: 'py-ROL-ih-sis.', acceptableVariations: ['pyrolysis'] },
+  { id: 50, word: 'Azeotrope', phonetic: '/əˈziːəˌtroʊp/', difficulty: 'advanced', category: 'Chemistry', tip: 'a-ZEE-oh-trope.', acceptableVariations: ['azeotrope'] }
 ];
 
 const PronunciationLab = () => {
@@ -250,55 +69,38 @@ const PronunciationLab = () => {
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
 
-  // Text-to-speech function
   const speakWord = (word) => {
     if ('speechSynthesis' in window) {
       setIsSpeaking(true);
       const utterance = new SpeechSynthesisUtterance(word);
-      utterance.rate = 0.8; // Slower for clarity
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      
+      utterance.rate = 0.8;
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
-      
-      window.speechSynthesis.cancel(); // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  // Start recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 16000
-        } 
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 } 
       });
       
       streamRef.current = stream;
       audioChunksRef.current = [];
 
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         
         if (audioBlob.size < 2000) {
-          setFeedback({
-            success: false,
-            message: 'Recording too short or no audio detected. Please speak clearly and hold for at least 2 seconds.'
-          });
+          setFeedback({ success: false, message: 'Recording too short. Speak clearly for at least 2 seconds.' });
           return;
         }
 
@@ -307,33 +109,23 @@ const PronunciationLab = () => {
           setUserPronunciation(transcription);
           checkPronunciation(transcription);
         } catch (error) {
-          console.error('Transcription error:', error);
-          setFeedback({
-            success: false,
-            message: 'Could not transcribe audio. Please try again.'
-          });
+          setFeedback({ success: false, message: 'Could not transcribe. Please try again.' });
         }
 
-        // Clean up stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
         }
       };
 
       mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
       setFeedback(null);
     } catch (error) {
-      console.error('Microphone access error:', error);
-      setFeedback({
-        success: false,
-        message: 'Could not access microphone. Please grant permission.'
-      });
+      setFeedback({ success: false, message: 'Could not access microphone.' });
     }
   };
 
-  // Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -341,114 +133,60 @@ const PronunciationLab = () => {
     }
   };
 
-  // Check pronunciation accuracy
   const checkPronunciation = (transcription) => {
     if (!selectedWord) return;
 
     const userText = transcription.toLowerCase().trim();
     const targetWord = selectedWord.word.toLowerCase();
-    
-    // Check if the word matches (allowing for variations)
     const variations = selectedWord.acceptableVariations || [targetWord];
-    const isCorrect = variations.some(variation => 
-      userText.includes(variation.toLowerCase())
-    );
+    const isCorrect = variations.some(v => userText.includes(v.toLowerCase()));
 
-    // Calculate similarity score (simple approach)
-    let accuracy = 0;
-    if (isCorrect) {
-      accuracy = 100;
-    } else {
-      // Calculate Levenshtein-like similarity
-      const similarity = calculateSimilarity(userText, targetWord);
-      accuracy = Math.round(similarity * 100);
-    }
+    let accuracy = isCorrect ? 100 : Math.round(calculateSimilarity(userText, targetWord) * 100);
 
-    // Update scores
-    setScores(prev => ({
-      ...prev,
-      [selectedWord.id]: Math.max(prev[selectedWord.id] || 0, accuracy)
-    }));
+    setScores(prev => ({ ...prev, [selectedWord.id]: Math.max(prev[selectedWord.id] || 0, accuracy) }));
 
     setFeedback({
       success: accuracy >= 70,
       accuracy,
-      message: accuracy >= 90 
-        ? 'Perfect pronunciation!' 
-        : accuracy >= 70 
-        ? 'Good job! Very close.' 
-        : accuracy >= 50
-        ? 'Not bad, but needs improvement. Try again!'
-        : 'Keep practicing. Listen carefully and try again.'
+      message: accuracy >= 90 ? 'Perfect!' : accuracy >= 70 ? 'Good job!' : accuracy >= 50 ? 'Keep trying!' : 'Practice more.'
     });
   };
 
-  // Simple similarity calculation
   const calculateSimilarity = (str1, str2) => {
     const longer = str1.length > str2.length ? str1 : str2;
     const shorter = str1.length > str2.length ? str2 : str1;
-    
     if (longer.length === 0) return 1.0;
-    
     const editDistance = levenshteinDistance(longer, shorter);
     return (longer.length - editDistance) / longer.length;
   };
 
-  // Levenshtein distance
   const levenshteinDistance = (str1, str2) => {
     const matrix = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
+    for (let i = 0; i <= str2.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= str1.length; j++) matrix[0][j] = j;
     for (let i = 1; i <= str2.length; i++) {
       for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
+        matrix[i][j] = str2.charAt(i - 1) === str1.charAt(j - 1) 
+          ? matrix[i - 1][j - 1]
+          : Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
       }
     }
-
     return matrix[str2.length][str1.length];
   };
 
-  // Filter words by difficulty
-  const filteredWords = filterDifficulty === 'all' 
-    ? pronunciationWords 
-    : pronunciationWords.filter(w => w.difficulty === filterDifficulty);
-
-  // Calculate overall progress
+  const filteredWords = filterDifficulty === 'all' ? pronunciationWords : pronunciationWords.filter(w => w.difficulty === filterDifficulty);
   const totalWords = pronunciationWords.length;
   const practisedWords = Object.keys(scores).length;
-  const averageScore = Object.values(scores).length > 0
-    ? Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length)
-    : 0;
+  const averageScore = Object.values(scores).length > 0 ? Math.round(Object.values(scores).reduce((a, b) => a + b, 0) / Object.values(scores).length) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 py-12 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-white mb-4">
-            Pronunciation Lab
-          </h1>
-          <p className="text-xl text-gray-300">
-            Practice technical terms with AI-powered voice recognition
-          </p>
+          <h1 className="text-5xl font-bold text-white mb-4">Pronunciation Lab</h1>
+          <p className="text-xl text-gray-300">Practice 50 technical terms with AI voice recognition</p>
         </div>
 
-        {/* Progress Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <Card className="p-6 bg-gradient-to-br from-blue-500/20 to-blue-600/20 border-blue-500/30">
             <div className="flex items-center justify-between">
@@ -474,77 +212,45 @@ const PronunciationLab = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-200 text-sm mb-1">Best Score</p>
-                <p className="text-3xl font-bold text-white">
-                  {Object.values(scores).length > 0 ? Math.max(...Object.values(scores)) : 0}%
-                </p>
+                <p className="text-3xl font-bold text-white">{Object.values(scores).length > 0 ? Math.max(...Object.values(scores)) : 0}%</p>
               </div>
               <CheckCircle className="w-12 h-12 text-purple-300" />
             </div>
           </Card>
         </div>
 
-        {/* Difficulty Filter */}
         <div className="mb-8 flex justify-center gap-4">
           {['all', 'beginner', 'intermediate', 'advanced'].map((level) => (
-            <button
-              key={level}
-              onClick={() => setFilterDifficulty(level)}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
-                filterDifficulty === level
-                  ? 'bg-purple-600 text-white shadow-lg'
-                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
-              }`}
-            >
+            <button key={level} onClick={() => setFilterDifficulty(level)} className={`px-6 py-2 rounded-lg font-semibold transition-all ${filterDifficulty === level ? 'bg-purple-600 text-white shadow-lg' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}>
               {level.charAt(0).toUpperCase() + level.slice(1)}
             </button>
           ))}
         </div>
 
-        {/* Word List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWords.map((word) => {
             const score = scores[word.id];
             const isSelected = selectedWord?.id === word.id;
 
             return (
-              <Card
-                key={word.id}
-                className={`p-6 cursor-pointer transition-all ${
-                  isSelected
-                    ? 'ring-2 ring-purple-500 bg-purple-500/10'
-                    : 'hover:bg-white/5'
-                } ${score >= 90 ? 'border-green-500/50' : ''}`}
-                onClick={() => setSelectedWord(word)}
-              >
+              <Card key={word.id} className={`p-6 cursor-pointer transition-all ${isSelected ? 'ring-2 ring-purple-500 bg-purple-500/10' : 'hover:bg-white/5'} ${score >= 90 ? 'border-green-500/50' : ''}`} onClick={() => setSelectedWord(word)}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="text-xl font-bold text-white mb-1">
-                      {word.word}
-                    </h3>
+                    <h3 className="text-xl font-bold text-white mb-1">{word.word}</h3>
                     <p className="text-sm text-gray-400">{word.phonetic}</p>
                   </div>
                   {score !== undefined && (
-                    <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                      score >= 90 ? 'bg-green-500/20 text-green-300' :
-                      score >= 70 ? 'bg-yellow-500/20 text-yellow-300' :
-                      'bg-red-500/20 text-red-300'
-                    }`}>
+                    <div className={`px-3 py-1 rounded-full text-sm font-bold ${score >= 90 ? 'bg-green-500/20 text-green-300' : score >= 70 ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'}`}>
                       {score}%
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                    word.difficulty === 'beginner' ? 'bg-green-500/20 text-green-300' :
-                    word.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-300' :
-                    'bg-red-500/20 text-red-300'
-                  }`}>
+                  <span className={`px-2 py-1 rounded text-xs font-semibold ${word.difficulty === 'beginner' ? 'bg-green-500/20 text-green-300' : word.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'}`}>
                     {word.difficulty}
                   </span>
-                  <span className="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-300">
-                    {word.category}
-                  </span>
+                  <span className="px-2 py-1 rounded text-xs bg-blue-500/20 text-blue-300">{word.category}</span>
                 </div>
 
                 {isSelected && (
@@ -552,31 +258,14 @@ const PronunciationLab = () => {
                     <p className="text-sm text-gray-300 mb-4">{word.tip}</p>
                     
                     <div className="flex gap-2 mb-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          speakWord(word.word);
-                        }}
-                        disabled={isSpeaking}
-                        className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg flex items-center justify-center gap-2 transition-colors"
-                      >
+                      <button onClick={(e) => { e.stopPropagation(); speakWord(word.word); }} disabled={isSpeaking} className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg flex items-center justify-center gap-2">
                         <Volume2 className="w-4 h-4" />
                         {isSpeaking ? 'Playing...' : 'Listen'}
                       </button>
 
-                      <button
-                        onMouseDown={startRecording}
-                        onMouseUp={stopRecording}
-                        onTouchStart={startRecording}
-                        onTouchEnd={stopRecording}
-                        className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                          isRecording
-                            ? 'bg-red-600 scale-95'
-                            : 'bg-purple-600 hover:bg-purple-700'
-                        } text-white`}
-                      >
-                        <Mic className={`w-4 h-4 ${isRecording ? 'animate-pulse' : ''}`} />
-                        {isRecording ? 'Recording...' : 'Record'}
+                      <button onClick={(e) => { e.stopPropagation(); isRecording ? stopRecording() : startRecording(); }} className={`flex-1 py-2 px-4 rounded-lg flex items-center justify-center gap-2 ${isRecording ? 'bg-red-600 hover:bg-red-700 animate-pulse' : 'bg-purple-600 hover:bg-purple-700'} text-white`}>
+                        <Mic className="w-4 h-4" />
+                        {isRecording ? 'Stop' : 'Record'}
                       </button>
                     </div>
 
@@ -588,29 +277,13 @@ const PronunciationLab = () => {
                     )}
 
                     {feedback && (
-                      <div className={`p-3 rounded-lg flex items-start gap-2 ${
-                        feedback.success
-                          ? 'bg-green-500/20 border border-green-500/30'
-                          : 'bg-red-500/20 border border-red-500/30'
-                      }`}>
-                        {feedback.success ? (
-                          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                        )}
+                      <div className={`p-3 rounded-lg flex items-start gap-2 ${feedback.success ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
+                        {feedback.success ? <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />}
                         <div>
                           {feedback.accuracy !== undefined && (
-                            <p className={`font-bold mb-1 ${
-                              feedback.success ? 'text-green-300' : 'text-red-300'
-                            }`}>
-                              Accuracy: {feedback.accuracy}%
-                            </p>
+                            <p className={`font-bold mb-1 ${feedback.success ? 'text-green-300' : 'text-red-300'}`}>Accuracy: {feedback.accuracy}%</p>
                           )}
-                          <p className={`text-sm ${
-                            feedback.success ? 'text-green-200' : 'text-red-200'
-                          }`}>
-                            {feedback.message}
-                          </p>
+                          <p className={`text-sm ${feedback.success ? 'text-green-200' : 'text-red-200'}`}>{feedback.message}</p>
                         </div>
                       </div>
                     )}
