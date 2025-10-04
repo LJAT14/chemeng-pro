@@ -1,131 +1,107 @@
+// src/hooks/useAIChat.js
 import { useState } from 'react';
-import groqService from '../services/groqService';
 
-const useAIChat = (interviewQuestions) => {
+const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+const GROQ_CHAT_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+const useAIChat = () => {
   const [messages, setMessages] = useState([]);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
-  const sendMessage = async (message) => {
-    const userMessage = { role: 'user', content: message, timestamp: Date.now() };
-    setMessages(prev => [...prev, userMessage]);
+  const sendMessage = async (userMessage, questionContext = null) => {
+    const userMsg = { role: 'user', content: userMessage, timestamp: Date.now() };
+    setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
-      const question = interviewQuestions[currentQuestion];
-      const context = {
-        type: 'interview',
-        category: question.category || 'general',
-        keywords: question.keywords || []
-      };
+      if (!GROQ_API_KEY) {
+        throw new Error('Groq API key not configured');
+      }
 
-      // Create prompt for Groq
-      const prompt = `The user answered this ${question.category} interview question: "${question.question.en}"
+      // Create prompt
+      let prompt = userMessage;
+      if (questionContext) {
+        prompt = `The user answered this interview question: "${questionContext}"
 
-Their answer: "${message}"
+Their answer: "${userMessage}"
 
 Provide brief feedback (2-3 sentences):
 1. What they did well
 2. One specific improvement tip
 
 Keep it encouraging but honest.`;
-
-      // Get AI feedback from Groq
-      const aiResponse = await groqService.chat(prompt, context);
-      
-      const aiMessage = { role: 'assistant', content: aiResponse, timestamp: Date.now() };
-      setMessages(prev => [...prev, aiMessage]);
-
-      // Move to next question after delay
-      if (currentQuestion < interviewQuestions.length - 1) {
-        setTimeout(() => {
-          setCurrentQuestion(prev => prev + 1);
-          const nextQuestion = interviewQuestions[currentQuestion + 1];
-          const questionMessage = { 
-            role: 'assistant', 
-            content: `Next question: ${nextQuestion.question.en}`, 
-            timestamp: Date.now() 
-          };
-          setMessages(prev => [...prev, questionMessage]);
-        }, 1500);
-      } else {
-        // Interview complete
-        setTimeout(() => {
-          const completeMessage = { 
-            role: 'assistant', 
-            content: "Great job completing the interview! You demonstrated good communication skills throughout. Would you like to try another scenario?", 
-            timestamp: Date.now() 
-          };
-          setMessages(prev => [...prev, completeMessage]);
-        }, 1500);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      
-      // Fallback if Groq fails
-      const question = interviewQuestions[currentQuestion];
-      const keywords = question.keywords || [];
-      const containsKeywords = keywords.some(keyword => 
-        message.toLowerCase().includes(keyword.toLowerCase())
-      );
-
-      let fallbackResponse;
-      if (containsKeywords) {
-        fallbackResponse = "Good answer! You covered key points. " + 
-               (currentQuestion < interviewQuestions.length - 1 
-                 ? "Let's move to the next question." 
-                 : "Interview complete!");
-      } else {
-        fallbackResponse = "Good start! Try to elaborate more. Consider mentioning: " + 
-               keywords.slice(0, 2).join(', ');
       }
 
-      const errorMessage = { 
+      const response = await fetch(GROQ_CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROQ_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an experienced interview coach providing constructive feedback. Be encouraging but honest. Focus on: content quality, communication clarity, areas for improvement, and strengths.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 300
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Groq API error:', response.status, errorText);
+        throw new Error(`Groq API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices[0].message.content;
+
+      const aiMsg = { 
         role: 'assistant', 
-        content: fallbackResponse, 
+        content: aiResponse, 
         timestamp: Date.now() 
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, aiMsg]);
 
-      // Still move to next question even on error
-      if (currentQuestion < interviewQuestions.length - 1) {
-        setTimeout(() => {
-          setCurrentQuestion(prev => prev + 1);
-          const nextQuestion = interviewQuestions[currentQuestion + 1];
-          const questionMessage = { 
-            role: 'assistant', 
-            content: nextQuestion.question.en, 
-            timestamp: Date.now() 
-          };
-          setMessages(prev => [...prev, questionMessage]);
-        }, 1500);
-      }
+      return aiResponse;
+
+    } catch (error) {
+      console.error('AI chat error:', error);
+      
+      // Fallback response if API fails
+      const fallbackMsg = { 
+        role: 'assistant', 
+        content: "Good answer! You're making progress. Keep practicing to refine your responses.", 
+        timestamp: Date.now() 
+      };
+      setMessages(prev => [...prev, fallbackMsg]);
+
+      return fallbackMsg.content;
+
     } finally {
       setIsLoading(false);
     }
   };
 
-  const startInterview = () => {
-    groqService.resetConversation();
-    const firstQuestion = interviewQuestions[0];
-    const introMessage = { 
-      role: 'assistant', 
-      content: `Welcome to your ${firstQuestion.category || 'interview'} practice session! I'll ask you questions and provide feedback using AI.
-
-Question 1: ${firstQuestion.question.en}`, 
-      timestamp: Date.now() 
-    };
-    setMessages([introMessage]);
-    setCurrentQuestion(0);
+  const clearMessages = () => {
+    setMessages([]);
   };
 
   return { 
     messages, 
     sendMessage, 
-    startInterview, 
-    currentQuestion,
-    isLoading 
+    isLoading,
+    clearMessages
   };
 };
 
+export { useAIChat };
 export default useAIChat;

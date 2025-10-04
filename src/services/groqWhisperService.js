@@ -26,10 +26,23 @@ export async function transcribeAudio(audioBlob) {
     // Create FormData for multipart upload
     const formData = new FormData();
     
-    // Convert blob to file with appropriate extension
-    const audioFile = new File([audioBlob], 'audio.webm', { 
-      type: audioBlob.type || 'audio/webm'
-    });
+    // Convert blob to file with webm extension (more compatible than mp4)
+    let fileName = 'audio.webm';
+    let fileType = 'audio/webm';
+    
+    // Check if we need to rename based on actual blob type
+    if (audioBlob.type.includes('mp4')) {
+      fileName = 'audio.m4a'; // Use m4a instead of mp4 for better compatibility
+      fileType = 'audio/m4a';
+    } else if (audioBlob.type.includes('webm')) {
+      fileName = 'audio.webm';
+      fileType = 'audio/webm';
+    } else if (audioBlob.type.includes('ogg')) {
+      fileName = 'audio.ogg';
+      fileType = 'audio/ogg';
+    }
+    
+    const audioFile = new File([audioBlob], fileName, { type: fileType });
     
     formData.append('file', audioFile);
     formData.append('model', 'whisper-large-v3');
