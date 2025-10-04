@@ -74,8 +74,12 @@ const AIInterviewChat = ({ questions }) => {
       };
 
       mediaRecorder.onstop = async () => {
-        const duration = recordingDuration;
-        console.log(`Stopping recording after ${duration} seconds`);
+        // Calculate actual duration
+        const actualDuration = recordingStartTimeRef.current 
+          ? Math.floor((Date.now() - recordingStartTimeRef.current) / 1000)
+          : 0;
+          
+        console.log(`Stopping recording after ${actualDuration} seconds`);
 
         // Stop duration tracker
         if (durationIntervalRef.current) {
@@ -98,9 +102,9 @@ const AIInterviewChat = ({ questions }) => {
         console.log('Final audio blob:', audioBlob.size, 'bytes, type:', audioBlob.type);
 
         // Check minimum duration (2 seconds)
-        if (duration < 2) {
-          console.log('Recording too short:', duration, 'seconds');
-          alert('Recording too short. Please hold the button and speak for at least 2 seconds.');
+        if (actualDuration < 2) {
+          console.log('Recording too short:', actualDuration, 'seconds');
+          alert('Recording too short. Please record for at least 2 seconds.');
           setTranscript('');
           return;
         }
@@ -159,6 +163,15 @@ const AIInterviewChat = ({ questions }) => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+    }
+  };
+
+  // Toggle recording on/off
+  const toggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -229,27 +242,23 @@ const AIInterviewChat = ({ questions }) => {
       <div className="mb-6">
         <div className="flex gap-3 mb-4">
           <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onTouchStart={startRecording}
-            onTouchEnd={stopRecording}
+            onClick={toggleRecording}
             disabled={isLoading}
             className={`flex-1 py-4 px-6 rounded-lg font-semibold transition-all flex items-center justify-center gap-3 ${
               isRecording
-                ? 'bg-red-600 scale-95 shadow-lg shadow-red-500/50'
+                ? 'bg-red-600 hover:bg-red-700 animate-pulse'
                 : 'bg-purple-600 hover:bg-purple-700'
             } text-white disabled:bg-gray-600 disabled:cursor-not-allowed`}
-            style={{ touchAction: 'none' }}
           >
             {isRecording ? (
               <>
-                <StopCircle className="w-6 h-6 animate-pulse" />
-                <span>Release to Stop ({recordingDuration}s)</span>
+                <StopCircle className="w-6 h-6" />
+                <span>Stop Recording ({recordingDuration}s)</span>
               </>
             ) : (
               <>
                 <Mic className="w-6 h-6" />
-                <span>Hold to Record</span>
+                <span>Start Recording</span>
               </>
             )}
           </button>
@@ -275,7 +284,7 @@ const AIInterviewChat = ({ questions }) => {
               </span>
             </div>
             <p className="text-red-200/70 text-sm mt-2">
-              Speak clearly. Release button when done.
+              Speak clearly. Click "Stop Recording" when done.
             </p>
           </div>
         )}
