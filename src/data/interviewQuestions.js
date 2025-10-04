@@ -1,239 +1,459 @@
-export const interviewQuestions = [
-  // TECHNICAL (8 questions)
-  {
-    id: 'tech-001',
-    category: 'technical',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Explain the difference between exothermic and endothermic reactions.',
-      pt: 'Explique a diferença entre reações exotérmicas e endotérmicas.'
-    },
-    keywords: ['energy', 'heat', 'temperature', 'enthalpy', 'release', 'absorb']
-  },
-  {
-    id: 'tech-002',
-    category: 'technical',
-    difficulty: 'intermediate',
-    question: {
-      en: 'What is the Arrhenius equation and why is it important?',
-      pt: 'O que é a equação de Arrhenius e por que é importante?'
-    },
-    keywords: ['activation energy', 'rate constant', 'temperature', 'kinetics']
-  },
-  {
-    id: 'tech-003',
-    category: 'technical',
-    difficulty: 'advanced',
-    question: {
-      en: 'Describe the principles of distillation and its applications.',
-      pt: 'Descreva os princípios da destilação e suas aplicações.'
-    },
-    keywords: ['separation', 'boiling point', 'vapor', 'liquid', 'equilibrium']
-  },
-  {
-    id: 'tech-004',
-    category: 'technical',
-    difficulty: 'intermediate',
-    question: {
-      en: 'What factors affect reaction rate?',
-      pt: 'Quais fatores afetam a taxa de reação?'
-    },
-    keywords: ['temperature', 'concentration', 'catalyst', 'surface area', 'pressure']
-  },
-  {
-    id: 'tech-005',
-    category: 'technical',
-    difficulty: 'advanced',
-    question: {
-      en: 'Explain the concept of equilibrium constant.',
-      pt: 'Explique o conceito de constante de equilíbrio.'
-    },
-    keywords: ['equilibrium', 'products', 'reactants', 'concentration', 'reversible']
-  },
-  {
-    id: 'tech-006',
-    category: 'technical',
-    difficulty: 'beginner',
-    question: {
-      en: 'What is a catalyst and how does it work?',
-      pt: 'O que é um catalisador e como funciona?'
-    },
-    keywords: ['catalyst', 'activation energy', 'rate', 'not consumed', 'pathway']
-  },
-  {
-    id: 'tech-007',
-    category: 'technical',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Describe the ideal gas law and its limitations.',
-      pt: 'Descreva a lei dos gases ideais e suas limitações.'
-    },
-    keywords: ['PV=nRT', 'pressure', 'volume', 'temperature', 'moles', 'real gas']
-  },
-  {
-    id: 'tech-008',
-    category: 'technical',
-    difficulty: 'advanced',
-    question: {
-      en: 'What is mass transfer and why is it important in chemical engineering?',
-      pt: 'O que é transferência de massa e por que é importante na engenharia química?'
-    },
-    keywords: ['diffusion', 'convection', 'concentration gradient', 'separation']
-  },
+// src/data/interviewQuestions.js
+// This file contains properly formatted questions for AIInterviewChat component
 
-  // BEHAVIORAL (10 questions)
-  {
-    id: 'behav-001',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Tell me about a time you faced a difficult challenge at work.',
-      pt: 'Conte sobre uma vez que enfrentou um desafio difícil no trabalho.'
+export const interviewQuestions = {
+  // Technical Roles
+  'chemical-engineer': [
+    {
+      id: 'chem-1',
+      question: {
+        en: 'Describe your experience with process design and optimization.',
+        pt: 'Descreva sua experiência com projeto e otimização de processos.'
+      },
+      category: 'technical'
     },
-    keywords: ['challenge', 'problem', 'solution', 'overcome', 'result', 'learned']
-  },
-  {
-    id: 'behav-002',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Describe a situation where you had to work with a difficult team member.',
-      pt: 'Descreva uma situação em que teve que trabalhar com um membro difícil da equipe.'
+    {
+      id: 'chem-2',
+      question: {
+        en: "How do you approach troubleshooting a reactor that's not meeting specifications?",
+        pt: 'Como você aborda a solução de problemas de um reator que não está atendendo às especificações?'
+      },
+      category: 'technical'
     },
-    keywords: ['teamwork', 'conflict', 'communication', 'resolution', 'collaboration']
-  },
-  {
-    id: 'behav-003',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Give an example of a time you showed leadership.',
-      pt: 'Dê um exemplo de quando demonstrou liderança.'
+    {
+      id: 'chem-3',
+      question: {
+        en: "Explain the principles of distillation and when you'd use it.",
+        pt: 'Explique os princípios da destilação e quando você a usaria.'
+      },
+      category: 'technical'
     },
-    keywords: ['leadership', 'initiative', 'team', 'decision', 'responsibility']
-  },
-  {
-    id: 'behav-004',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Tell me about a time you failed and what you learned.',
-      pt: 'Conte sobre uma vez que você falhou e o que aprendeu.'
+    {
+      id: 'chem-4',
+      question: {
+        en: 'What safety protocols do you follow when working with hazardous materials?',
+        pt: 'Quais protocolos de segurança você segue ao trabalhar com materiais perigosos?'
+      },
+      category: 'safety'
     },
-    keywords: ['mistake', 'failure', 'learned', 'improvement', 'growth']
-  },
-  {
-    id: 'behav-005',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Describe a time when you had to meet a tight deadline.',
-      pt: 'Descreva uma vez em que teve que cumprir um prazo apertado.'
+    {
+      id: 'chem-5',
+      question: {
+        en: 'Tell me about a time you improved process efficiency.',
+        pt: 'Conte-me sobre uma vez que você melhorou a eficiência do processo.'
+      },
+      category: 'behavioral'
     },
-    keywords: ['deadline', 'time management', 'priority', 'pressure', 'delivered']
-  },
-  {
-    id: 'behav-006',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'How do you handle stress and pressure?',
-      pt: 'Como você lida com estresse e pressão?'
+    {
+      id: 'chem-6',
+      question: {
+        en: 'How do you perform mass and energy balances?',
+        pt: 'Como você realiza balanços de massa e energia?'
+      },
+      category: 'technical'
     },
-    keywords: ['stress', 'coping', 'management', 'balance', 'strategies']
-  },
-  {
-    id: 'behav-007',
-    category: 'behavioral',
-    difficulty: 'beginner',
-    question: {
-      en: 'Why do you want to work in this field?',
-      pt: 'Por que você quer trabalhar nesta área?'
+    {
+      id: 'chem-7',
+      question: {
+        en: 'What is your experience with process simulation software like Aspen Plus or HYSYS?',
+        pt: 'Qual é sua experiência com software de simulação de processos como Aspen Plus ou HYSYS?'
+      },
+      category: 'technical'
     },
-    keywords: ['passion', 'interest', 'goals', 'motivation', 'career']
-  },
-  {
-    id: 'behav-008',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Describe a time you had to adapt to change.',
-      pt: 'Descreva uma vez que teve que se adaptar a mudanças.'
-    },
-    keywords: ['change', 'adapt', 'flexible', 'adjustment', 'resilience']
-  },
-  {
-    id: 'behav-009',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'Tell me about a time you went above and beyond.',
-      pt: 'Conte sobre uma vez que foi além do esperado.'
-    },
-    keywords: ['initiative', 'extra effort', 'dedication', 'exceeded', 'commitment']
-  },
-  {
-    id: 'behav-010',
-    category: 'behavioral',
-    difficulty: 'intermediate',
-    question: {
-      en: 'How do you prioritize tasks when you have multiple deadlines?',
-      pt: 'Como você prioriza tarefas quando tem múltiplos prazos?'
-    },
-    keywords: ['prioritize', 'organize', 'time management', 'efficiency', 'planning']
-  },
+    {
+      id: 'chem-8',
+      question: {
+        en: 'Describe a challenging chemical engineering project you have worked on.',
+        pt: 'Descreva um projeto desafiador de engenharia química em que você trabalhou.'
+      },
+      category: 'behavioral'
+    }
+  ],
 
-  // CASE STUDY (5 questions)
-  {
-    id: 'case-001',
-    category: 'case-study',
-    difficulty: 'advanced',
-    question: {
-      en: 'A chemical plant is experiencing declining yield. How would you investigate?',
-      pt: 'Uma planta química está tendo queda no rendimento. Como você investigaria?'
+  'process-engineer': [
+    {
+      id: 'proc-1',
+      question: {
+        en: 'How do you optimize existing processes for better efficiency?',
+        pt: 'Como você otimiza processos existentes para melhor eficiência?'
+      },
+      category: 'technical'
     },
-    keywords: ['analyze', 'data', 'investigate', 'troubleshoot', 'methodology']
-  },
-  {
-    id: 'case-002',
-    category: 'case-study',
-    difficulty: 'advanced',
-    question: {
-      en: 'Design a process to separate a mixture of ethanol and water.',
-      pt: 'Projete um processo para separar uma mistura de etanol e água.'
+    {
+      id: 'proc-2',
+      question: {
+        en: 'Describe your experience with heat exchangers and their design.',
+        pt: 'Descreva sua experiência com trocadores de calor e seu projeto.'
+      },
+      category: 'technical'
     },
-    keywords: ['distillation', 'separation', 'design', 'efficiency', 'optimization']
-  },
-  {
-    id: 'case-003',
-    category: 'case-study',
-    difficulty: 'advanced',
-    question: {
-      en: 'How would you reduce production costs by 20% without compromising quality?',
-      pt: 'Como você reduziria custos de produção em 20% sem comprometer a qualidade?'
+    {
+      id: 'proc-3',
+      question: {
+        en: 'What tools do you use for process flow diagrams?',
+        pt: 'Quais ferramentas você usa para diagramas de fluxo de processo?'
+      },
+      category: 'technical'
     },
-    keywords: ['cost', 'optimization', 'efficiency', 'quality', 'analysis', 'strategy']
-  },
-  {
-    id: 'case-004',
-    category: 'case-study',
-    difficulty: 'advanced',
-    question: {
-      en: 'A reactor temperature is fluctuating. What steps would you take?',
-      pt: 'A temperatura de um reator está flutuando. Que medidas você tomaria?'
+    {
+      id: 'proc-4',
+      question: {
+        en: 'Tell me about a time you reduced production costs.',
+        pt: 'Conte-me sobre uma vez que você reduziu custos de produção.'
+      },
+      category: 'behavioral'
     },
-    keywords: ['troubleshoot', 'control', 'safety', 'analysis', 'solution']
-  },
-  {
-    id: 'case-005',
-    category: 'case-study',
-    difficulty: 'advanced',
-    question: {
-      en: 'Propose a method to increase production capacity by 30%.',
-      pt: 'Proponha um método para aumentar a capacidade de produção em 30%.'
+    {
+      id: 'proc-5',
+      question: {
+        en: 'How do you handle process deviations?',
+        pt: 'Como você lida com desvios de processo?'
+      },
+      category: 'technical'
     },
-    keywords: ['scale-up', 'capacity', 'process', 'optimization', 'feasibility']
-  }
-];
+    {
+      id: 'proc-6',
+      question: {
+        en: 'What is your experience with Six Sigma or Lean methodologies?',
+        pt: 'Qual é sua experiência com metodologias Six Sigma ou Lean?'
+      },
+      category: 'technical'
+    }
+  ],
+
+  'software-engineer': [
+    {
+      id: 'soft-1',
+      question: {
+        en: 'Describe your experience with full-stack development.',
+        pt: 'Descreva sua experiência com desenvolvimento full-stack.'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'soft-2',
+      question: {
+        en: 'How do you approach debugging a complex system issue?',
+        pt: 'Como você aborda a depuração de um problema de sistema complexo?'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'soft-3',
+      question: {
+        en: 'What is your preferred tech stack and why?',
+        pt: 'Qual é sua pilha de tecnologia preferida e por quê?'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'soft-4',
+      question: {
+        en: 'Tell me about a time you optimized application performance.',
+        pt: 'Conte-me sobre uma vez que você otimizou o desempenho de uma aplicação.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'soft-5',
+      question: {
+        en: 'How do you ensure code quality in your projects?',
+        pt: 'Como você garante a qualidade do código em seus projetos?'
+      },
+      category: 'technical'
+    }
+  ],
+
+  'data-scientist': [
+    {
+      id: 'data-1',
+      question: {
+        en: 'Describe your experience with machine learning models.',
+        pt: 'Descreva sua experiência com modelos de aprendizado de máquina.'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'data-2',
+      question: {
+        en: 'How do you handle missing or incomplete data?',
+        pt: 'Como você lida com dados ausentes ou incompletos?'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'data-3',
+      question: {
+        en: 'What is your approach to feature engineering?',
+        pt: 'Qual é sua abordagem para engenharia de características?'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'data-4',
+      question: {
+        en: 'Tell me about a data analysis project you are proud of.',
+        pt: 'Conte-me sobre um projeto de análise de dados de que você se orgulha.'
+      },
+      category: 'behavioral'
+    }
+  ],
+
+  'project-manager': [
+    {
+      id: 'pm-1',
+      question: {
+        en: 'How do you prioritize tasks when everything is high priority?',
+        pt: 'Como você prioriza tarefas quando tudo é alta prioridade?'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'pm-2',
+      question: {
+        en: 'Describe your experience managing cross-functional teams.',
+        pt: 'Descreva sua experiência gerenciando equipes multifuncionais.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'pm-3',
+      question: {
+        en: 'How do you handle project delays or setbacks?',
+        pt: 'Como você lida com atrasos ou contratempos de projeto?'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'pm-4',
+      question: {
+        en: 'What project management methodologies do you prefer?',
+        pt: 'Quais metodologias de gerenciamento de projetos você prefere?'
+      },
+      category: 'technical'
+    }
+  ],
+
+  'team-lead': [
+    {
+      id: 'lead-1',
+      question: {
+        en: 'How do you delegate tasks effectively?',
+        pt: 'Como você delega tarefas efetivamente?'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'lead-2',
+      question: {
+        en: 'Describe a time you resolved a conflict within your team.',
+        pt: 'Descreva uma vez que você resolveu um conflito dentro de sua equipe.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'lead-3',
+      question: {
+        en: 'How do you provide constructive feedback?',
+        pt: 'Como você fornece feedback construtivo?'
+      },
+      category: 'behavioral'
+    }
+  ],
+
+  'business-analyst': [
+    {
+      id: 'ba-1',
+      question: {
+        en: 'How do you gather and document requirements?',
+        pt: 'Como você coleta e documenta requisitos?'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'ba-2',
+      question: {
+        en: 'Describe your experience with process improvement.',
+        pt: 'Descreva sua experiência com melhoria de processos.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'ba-3',
+      question: {
+        en: 'How do you handle conflicting stakeholder requirements?',
+        pt: 'Como você lida com requisitos conflitantes de partes interessadas?'
+      },
+      category: 'behavioral'
+    }
+  ],
+
+  'product-manager': [
+    {
+      id: 'prod-1',
+      question: {
+        en: 'How do you prioritize features in a product roadmap?',
+        pt: 'Como você prioriza recursos em um roteiro de produto?'
+      },
+      category: 'technical'
+    },
+    {
+      id: 'prod-2',
+      question: {
+        en: 'Describe your experience with user research.',
+        pt: 'Descreva sua experiência com pesquisa de usuário.'
+      },
+      category: 'behavioral'
+    }
+  ],
+
+  'general-professional': [
+    {
+      id: 'gen-1',
+      question: {
+        en: 'Tell me about yourself and your background.',
+        pt: 'Fale-me sobre você e seu histórico.'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'gen-2',
+      question: {
+        en: 'What are your career goals for the next 5 years?',
+        pt: 'Quais são seus objetivos de carreira para os próximos 5 anos?'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'gen-3',
+      question: {
+        en: 'Why are you interested in this field?',
+        pt: 'Por que você está interessado neste campo?'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'gen-4',
+      question: {
+        en: 'What is your biggest professional achievement?',
+        pt: 'Qual é sua maior conquista profissional?'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'gen-5',
+      question: {
+        en: 'How do you handle workplace challenges?',
+        pt: 'Como você lida com desafios no local de trabalho?'
+      },
+      category: 'behavioral'
+    }
+  ],
+
+  'casual-conversation': [
+    {
+      id: 'casual-1',
+      question: {
+        en: 'What do you enjoy doing in your free time?',
+        pt: 'O que você gosta de fazer no seu tempo livre?'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'casual-2',
+      question: {
+        en: 'Tell me about a book or article you read recently.',
+        pt: 'Conte-me sobre um livro ou artigo que você leu recentemente.'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'casual-3',
+      question: {
+        en: 'What is something interesting you have learned lately?',
+        pt: 'O que é algo interessante que você aprendeu ultimamente?'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'casual-4',
+      question: {
+        en: 'How do you stay motivated and productive?',
+        pt: 'Como você se mantém motivado e produtivo?'
+      },
+      category: 'conversational'
+    }
+  ],
+
+  'behavioral-interview': [
+    {
+      id: 'beh-1',
+      question: {
+        en: 'Tell me about a time you had to work with a difficult colleague.',
+        pt: 'Conte-me sobre uma vez que você teve que trabalhar com um colega difícil.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'beh-2',
+      question: {
+        en: 'Describe a situation where you had to meet a tight deadline.',
+        pt: 'Descreva uma situação em que você teve que cumprir um prazo apertado.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'beh-3',
+      question: {
+        en: 'How do you handle criticism?',
+        pt: 'Como você lida com críticas?'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'beh-4',
+      question: {
+        en: 'Tell me about a time you showed leadership.',
+        pt: 'Conte-me sobre uma vez que você demonstrou liderança.'
+      },
+      category: 'behavioral'
+    }
+  ],
+
+  'student-intern': [
+    {
+      id: 'student-1',
+      question: {
+        en: 'What interests you about this field of study or work?',
+        pt: 'O que te interessa neste campo de estudo ou trabalho?'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'student-2',
+      question: {
+        en: 'Describe a challenging course or project you have completed.',
+        pt: 'Descreva um curso ou projeto desafiador que você completou.'
+      },
+      category: 'behavioral'
+    },
+    {
+      id: 'student-3',
+      question: {
+        en: 'How do you balance academics with other activities?',
+        pt: 'Como você equilibra acadêmicos com outras atividades?'
+      },
+      category: 'conversational'
+    },
+    {
+      id: 'student-4',
+      question: {
+        en: 'What skills from your studies are you eager to apply?',
+        pt: 'Quais habilidades de seus estudos você está ansioso para aplicar?'
+      },
+      category: 'conversational'
+    }
+  ]
+};
 
 export default interviewQuestions;
