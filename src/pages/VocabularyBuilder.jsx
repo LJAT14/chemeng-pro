@@ -1,6 +1,10 @@
 // src/pages/VocabularyBuilder.jsx
 import React, { useState } from 'react';
 import { BookOpen, Volume2, CheckCircle, XCircle, Star, Play } from 'lucide-react';
+import PageWrapper from '../components/PageWrapper';
+import { useToast } from '../components/Toast';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { speakText } from '../services/elevenLabsTTS';
 
 const vocabularyData = [
   // Process Equipment (15)

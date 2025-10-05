@@ -1,5 +1,10 @@
- import React, { useState } from 'react';
+// src/pages/ReadingComprehension.jsx
+import React, { useState } from 'react';
 import { Headphones, Play, Pause, CheckCircle, XCircle, Award, Volume2 } from 'lucide-react';
+import PageWrapper from '../components/PageWrapper';
+import { useToast } from '../components/Toast';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { speakText, stopSpeaking } from '../services/elevenLabsTTS';
 
 const readingArticles = [
   {

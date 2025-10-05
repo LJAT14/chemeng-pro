@@ -1,8 +1,11 @@
 // src/pages/PronunciationLab.jsx
 import React, { useState, useRef } from 'react';
-import { Mic, Volume2, CheckCircle, XCircle, Play, Pause, Gauge } from 'lucide-react';
-import Card from '../components/shared/Card';
+import { Mic, Volume2, CheckCircle, XCircle, Play, Pause, Gauge, Award } from 'lucide-react';
+import PageWrapper from '../components/PageWrapper';
+import { useToast } from '../components/Toast';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { transcribeAudio } from '../services/groqWhisperService';
+import { speakText } from '../services/elevenLabsTTS';
 
 const pronunciationWords = [
   // Beginner (10)
@@ -63,6 +66,7 @@ const pronunciationWords = [
 ];
 
 const PronunciationLab = () => {
+  const toast = useToast();
   const [selectedWord, setSelectedWord] = useState(null);
   const [filterDifficulty, setFilterDifficulty] = useState('all');
   const [isRecording, setIsRecording] = useState(false);
@@ -72,19 +76,20 @@ const PronunciationLab = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(0.75);
   const [stats, setStats] = useState({ correct: 0, total: 0 });
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
   const recordingStartTimeRef = useRef(null);
   const durationIntervalRef = useRef(null);
-  const utteranceRef = useRef(null);
 
   const filteredWords = filterDifficulty === 'all' 
     ? pronunciationWords 
     : pronunciationWords.filter(w => w.difficulty === filterDifficulty);
 
-  const playPronunciation = () => {
+  const playPronunciation = async () => {
     if (!selectedWord) return;
 
     if (isPlaying) {
@@ -93,24 +98,36 @@ const PronunciationLab = () => {
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(selectedWord.word);
-    utterance.rate = playbackSpeed;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.startsWith('en-US')) || voices[0];
-    if (preferredVoice) utterance.voice = preferredVoice;
+    setIsLoadingAudio(true);
+    setIsPlaying(true);
 
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      alert('Speech synthesis failed. Please check browser settings.');
-    };
+    try {
+      // Try ElevenLabs first
+      await speakText(selectedWord.word, playbackSpeed);
+      toast.success('Playing pronunciation');
+    } catch (error) {
+      console.error('ElevenLabs failed, using browser TTS:', error);
+      
+      // Fallback to browser TTS
+      const utterance = new SpeechSynthesisUtterance(selectedWord.word);
+      utterance.rate = playbackSpeed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => v.lang.startsWith('en-US')) || voices[0];
+      if (preferredVoice) utterance.voice = preferredVoice;
 
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => {
+        setIsPlaying(false);
+        toast.error('Audio playback failed');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } finally {
+      setIsLoadingAudio(false);
+    }
   };
 
   const startRecording = async () => {
@@ -118,11 +135,9 @@ const PronunciationLab = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      let mimeType = 'audio/webm';
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus';
-      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-        mimeType = 'audio/mp4';
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
       }
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
@@ -138,15 +153,21 @@ const PronunciationLab = () => {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         
-        if (audioBlob.size > 0) {
+        if (audioBlob.size > 0 && recordingDuration >= 1) {
+          setIsProcessing(true);
           try {
             const transcript = await transcribeAudio(audioBlob);
             setUserTranscript(transcript);
             calculateAccuracy(transcript);
+            toast.success('Pronunciation analyzed!');
           } catch (error) {
             console.error('Transcription error:', error);
-            alert('Could not transcribe audio. Please try again.');
+            toast.error('Could not analyze pronunciation. Please try again.');
+          } finally {
+            setIsProcessing(false);
           }
+        } else {
+          toast.warning('Recording too short. Please speak for at least 1 second.');
         }
 
         if (streamRef.current) {
@@ -164,9 +185,10 @@ const PronunciationLab = () => {
 
       mediaRecorder.start();
       setIsRecording(true);
+      toast.info('Recording started - speak clearly');
     } catch (error) {
       console.error('Microphone error:', error);
-      alert('Could not access microphone. Please check permissions.');
+      toast.error('Could not access microphone. Please check permissions.');
     }
   };
 
@@ -182,6 +204,7 @@ const PronunciationLab = () => {
     const target = selectedWord.word.toLowerCase().trim();
     const spoken = transcript.toLowerCase().trim();
     
+    // Levenshtein distance algorithm
     const distance = levenshteinDistance(target, spoken);
     const maxLen = Math.max(target.length, spoken.length);
     const accuracyScore = Math.max(0, ((maxLen - distance) / maxLen) * 100);
@@ -190,8 +213,10 @@ const PronunciationLab = () => {
     
     if (accuracyScore >= 70) {
       setStats(prev => ({ correct: prev.correct + 1, total: prev.total + 1 }));
+      toast.success(`Great job! ${Math.round(accuracyScore)}% accurate`);
     } else {
       setStats(prev => ({ ...prev, total: prev.total + 1 }));
+      toast.warning(`${Math.round(accuracyScore)}% - Try again!`);
     }
   };
 
@@ -216,38 +241,33 @@ const PronunciationLab = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Pronunciation Lab</h1>
-          <p className="text-gray-300">Practice chemical engineering terminology with voice recognition</p>
-        </div>
-
+    <PageWrapper title="Pronunciation Lab" subtitle="Master technical terminology with AI-powered voice recognition">
+      <div className="space-y-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-            <div className="text-gray-300 text-sm">Words Practiced</div>
-            <div className="text-3xl font-bold text-white">{stats.total}</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/20">
+            <div className="text-gray-300 text-sm mb-1">Words Practiced</div>
+            <div className="text-3xl sm:text-4xl font-bold text-white">{stats.total}</div>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-            <div className="text-gray-300 text-sm">Correct</div>
-            <div className="text-3xl font-bold text-green-400">{stats.correct}</div>
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/20">
+            <div className="text-gray-300 text-sm mb-1">Correct</div>
+            <div className="text-3xl sm:text-4xl font-bold text-green-400">{stats.correct}</div>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-            <div className="text-gray-300 text-sm">Accuracy</div>
-            <div className="text-3xl font-bold text-purple-400">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/20">
+            <div className="text-gray-300 text-sm mb-1">Accuracy</div>
+            <div className="text-3xl sm:text-4xl font-bold text-purple-400">
               {stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0}%
             </div>
           </div>
         </div>
 
         {/* Filter */}
-        <div className="mb-6 flex gap-3 flex-wrap">
+        <div className="flex gap-3 flex-wrap">
           {['all', 'beginner', 'intermediate', 'advanced'].map((level) => (
             <button
               key={level}
               onClick={() => setFilterDifficulty(level)}
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${
+              className={`px-4 sm:px-6 py-2 rounded-lg font-semibold transition-all ${
                 filterDifficulty === level
                   ? 'bg-purple-600 text-white'
                   : 'bg-white/10 text-gray-300 hover:bg-white/20'
@@ -260,67 +280,85 @@ const PronunciationLab = () => {
 
         {/* Instruction Banner */}
         {!selectedWord && (
-          <div className="mb-6 bg-blue-500/20 border border-blue-500 rounded-xl p-4 text-center">
-            <p className="text-blue-200">Click on any word card below to start practicing</p>
+          <div className="bg-blue-500/20 border border-blue-500 rounded-xl p-4 text-center">
+            <p className="text-blue-200">Click on any word card below to start practicing with AI pronunciation feedback</p>
           </div>
         )}
 
         {/* Selected Word Practice Area */}
         {selectedWord && (
-          <div className="mb-6 bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 sm:p-8 border border-white/20">
             <div className="text-center mb-6">
-              <h2 className="text-5xl font-bold text-white mb-2">{selectedWord.word}</h2>
-              <p className="text-2xl text-purple-300 mb-1">{selectedWord.phonetic}</p>
+              <h2 className="text-4xl sm:text-5xl font-bold text-white mb-2">{selectedWord.word}</h2>
+              <p className="text-xl sm:text-2xl text-purple-300 mb-1">{selectedWord.phonetic}</p>
               <p className="text-gray-400">{selectedWord.category} • {selectedWord.difficulty}</p>
             </div>
 
             {/* Playback Speed Control */}
-            <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="flex items-center justify-center gap-4 mb-6 flex-wrap">
               <Gauge className="w-5 h-5 text-gray-400" />
-              <span className="text-gray-300 text-sm">Speed:</span>
-              {[0.5, 0.75, 1.0].map(speed => (
+              <span className="text-gray-300 text-sm">Pronunciation Speed:</span>
+              {[
+                { value: 0.5, label: 'Very Slow' },
+                { value: 0.75, label: 'Slow' },
+                { value: 1.0, label: 'Normal' }
+              ].map(({ value, label }) => (
                 <button
-                  key={speed}
-                  onClick={() => setPlaybackSpeed(speed)}
-                  className={`px-4 py-2 rounded-lg transition-all ${
-                    playbackSpeed === speed
+                  key={value}
+                  onClick={() => setPlaybackSpeed(value)}
+                  className={`px-3 sm:px-4 py-2 rounded-lg transition-all text-sm ${
+                    playbackSpeed === value
                       ? 'bg-purple-600 text-white'
                       : 'bg-white/10 text-gray-300 hover:bg-white/20'
                   }`}
                 >
-                  {speed === 0.5 ? 'Very Slow' : speed === 0.75 ? 'Slow' : 'Normal'}
+                  {label}
                 </button>
               ))}
             </div>
 
             {/* Control Buttons */}
-            <div className="flex gap-4 justify-center mb-6">
+            <div className="flex gap-3 sm:gap-4 justify-center mb-6 flex-wrap">
               <button
                 onClick={playPronunciation}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl transition-all"
+                disabled={isLoadingAudio}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700 disabled:cursor-not-allowed text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl transition-all"
               >
-                {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                {isPlaying ? 'Stop' : 'Listen'}
+                {isLoadingAudio ? (
+                  <LoadingSpinner size="sm" color="white" />
+                ) : isPlaying ? (
+                  <Pause className="w-5 sm:w-6 h-5 sm:h-6" />
+                ) : (
+                  <Play className="w-5 sm:w-6 h-5 sm:h-6" />
+                )}
+                <span className="text-sm sm:text-base">{isPlaying ? 'Stop' : 'Hear Pronunciation'}</span>
               </button>
 
               <button
                 onClick={isRecording ? stopRecording : startRecording}
-                className={`flex items-center gap-2 px-8 py-4 rounded-xl transition-all ${
+                disabled={isProcessing}
+                className={`flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl transition-all ${
                   isRecording
                     ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white disabled:bg-purple-700 disabled:cursor-not-allowed'
                 }`}
               >
-                <Mic className="w-6 h-6" />
-                {isRecording ? `Recording... ${recordingDuration}s` : 'Record'}
+                {isProcessing ? (
+                  <LoadingSpinner size="sm" color="white" />
+                ) : (
+                  <Mic className="w-5 sm:w-6 h-5 sm:h-6" />
+                )}
+                <span className="text-sm sm:text-base">
+                  {isProcessing ? 'Analyzing...' : isRecording ? `Recording... ${recordingDuration}s` : 'Record Your Voice'}
+                </span>
               </button>
             </div>
 
             {/* Results */}
             {userTranscript && (
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-white font-semibold text-lg">Your Pronunciation:</h3>
+              <div className="bg-white/5 rounded-xl p-4 sm:p-6 border border-white/10">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <h3 className="text-white font-semibold text-base sm:text-lg">Your Pronunciation:</h3>
                   {accuracy !== null && (
                     <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                       accuracy >= 70 ? 'bg-green-500/20' : 'bg-red-500/20'
@@ -330,15 +368,15 @@ const PronunciationLab = () => {
                       ) : (
                         <XCircle className="w-5 h-5 text-red-400" />
                       )}
-                      <span className={accuracy >= 70 ? 'text-green-400' : 'text-red-400'}>
+                      <span className={`text-sm sm:text-base ${accuracy >= 70 ? 'text-green-400' : 'text-red-400'}`}>
                         {accuracy}% accurate
                       </span>
                     </div>
                   )}
                 </div>
-                <p className="text-2xl text-white mb-2">{userTranscript}</p>
+                <p className="text-xl sm:text-2xl text-white mb-2">{userTranscript}</p>
                 {accuracy < 70 && (
-                  <p className="text-yellow-400 text-sm">Try again! Listen carefully and repeat slowly.</p>
+                  <p className="text-yellow-400 text-sm">Listen to the correct pronunciation again and practice slowly!</p>
                 )}
               </div>
             )}
@@ -346,25 +384,41 @@ const PronunciationLab = () => {
         )}
 
         {/* Word Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredWords.map((word) => (
-            <Card
+            <button
               key={word.id}
-              onClick={() => setSelectedWord(word)}
-              className={`cursor-pointer transition-all hover:scale-105 ${
+              onClick={() => {
+                setSelectedWord(word);
+                setUserTranscript('');
+                setAccuracy(null);
+              }}
+              className={`bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20 hover:border-purple-500 transition-all text-left ${
                 selectedWord?.id === word.id ? 'ring-4 ring-purple-500' : ''
               }`}
             >
-              <div className="p-4 text-center">
-                <p className="text-xl font-bold text-white mb-1">{word.word}</p>
-                <p className="text-sm text-purple-300">{word.phonetic}</p>
-                <p className="text-xs text-gray-400 mt-2">{word.category}</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-lg sm:text-xl font-bold text-white">{word.word}</p>
+                <Volume2 className="w-5 h-5 text-purple-400" />
               </div>
-            </Card>
+              <p className="text-xs sm:text-sm text-purple-300 mb-2">{word.phonetic}</p>
+              <div className="flex gap-2">
+                <span className={`text-xs px-2 py-1 rounded ${
+                  word.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
+                  word.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {word.difficulty}
+                </span>
+                <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400">
+                  {word.category}
+                </span>
+              </div>
+            </button>
           ))}
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 

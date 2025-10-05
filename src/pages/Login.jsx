@@ -15,6 +15,16 @@ const Login = () => {
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    if (savedEmail && savedPassword) {
+      setEmail(savedEmail);
+      setPassword(savedPassword);
+      setRememberMe(true);
+    }
+  }, []);
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setError('');
@@ -300,11 +310,20 @@ const Login = () => {
                 </button>
               </div>
 
+              {/* Guest Mode Option */}
+              <div className="mt-4">
+                <button
+                  onClick={() => navigate('/interview')}
+                  className="w-full text-center text-gray-400 hover:text-gray-300 transition-colors text-sm py-2"
+                >
+                  Continue as Guest (no progress tracking)
+                </button>
+              </div>
+
               {!isSignup && (
                 <div className="mt-4 p-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
                   <p className="text-indigo-300 text-xs text-center">
-                    Demo: test@test.com / test123456
-                  </p>
+                   </p>
                 </div>
               )}
             </div>

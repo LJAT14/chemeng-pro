@@ -1,22 +1,23 @@
-// src/services/elevenLabsTTS.js
-
+ 
 const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY;
-const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - natural female voice
+const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah voice - professional, clear
 
 /**
- * Convert text to speech using ElevenLabs API
+ * Speak text using ElevenLabs API with adjustable speed
  * @param {string} text - Text to speak
- * @param {number} speed - Playback speed (0.5 to 2.0)
+ * @param {number} speed - Speed multiplier (0.5 = slow, 1.0 = normal, 1.5 = fast)
  * @returns {Promise<void>}
  */
 export async function speakText(text, speed = 1.0) {
   if (!ELEVENLABS_API_KEY) {
-    console.warn('ElevenLabs API key not configured, using browser TTS instead');
-    return speakWithBrowser(text, speed);
+    console.warn('ElevenLabs API key not configured, falling back to browser TTS');
+    return speakWithBrowserTTS(text, speed);
   }
 
   try {
-    console.log('🔊 Speaking with ElevenLabs:', text.substring(0, 50) + '...');
+    // Adjust stability based on speed for better quality
+    const stability = speed < 0.8 ? 0.7 : 0.5;
+    const similarity_boost = 0.75;
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
@@ -25,16 +26,16 @@ export async function speakText(text, speed = 1.0) {
         headers: {
           'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
-          'xi-api-key': ELEVENLABS_API_KEY
+          'xi-api-key': ELEVENLABS_API_KEY,
         },
         body: JSON.stringify({
           text: text,
           model_id: 'eleven_monolingual_v1',
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75
-          }
-        })
+            stability: stability,
+            similarity_boost: similarity_boost,
+          },
+        }),
       }
     );
 
@@ -45,61 +46,53 @@ export async function speakText(text, speed = 1.0) {
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
-    
-    // Set playback speed
+
+    // Adjust playback rate for speed control
     audio.playbackRate = speed;
 
     return new Promise((resolve, reject) => {
       audio.onended = () => {
         URL.revokeObjectURL(audioUrl);
-        console.log('✓ ElevenLabs playback complete');
         resolve();
       };
       audio.onerror = (error) => {
         URL.revokeObjectURL(audioUrl);
-        console.error('ElevenLabs audio playback error:', error);
         reject(error);
       };
-      audio.play();
+      audio.play().catch(reject);
     });
-
   } catch (error) {
-    console.error('ElevenLabs TTS error:', error);
-    return speakWithBrowser(text, speed);
+    console.error('ElevenLabs TTS failed:', error);
+    // Fallback to browser TTS
+    return speakWithBrowserTTS(text, speed);
   }
 }
 
 /**
- * Fallback to browser's built-in speech synthesis
+ * Fallback browser text-to-speech
  * @param {string} text - Text to speak
- * @param {number} speed - Playback speed (0.5 to 2.0)
+ * @param {number} speed - Speed multiplier
  * @returns {Promise<void>}
  */
-function speakWithBrowser(text, speed = 1.0) {
-  if (!('speechSynthesis' in window)) {
-    console.warn('Speech synthesis not supported');
-    return Promise.resolve();
-  }
+function speakWithBrowserTTS(text, speed = 1.0) {
+  return new Promise((resolve, reject) => {
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = speed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
 
-  return new Promise((resolve) => {
-    window.speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = speed;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    
-    // Try to get a better voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
-                        || voices.find(v => v.lang.startsWith('en'));
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => v.lang.startsWith('en-US')) || voices[0];
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      utterance.onend = resolve;
+      utterance.onerror = reject;
+
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      reject(error);
     }
-    
-    utterance.onend = resolve;
-    utterance.onerror = resolve;
-    window.speechSynthesis.speak(utterance);
   });
 }
 
@@ -107,12 +100,15 @@ function speakWithBrowser(text, speed = 1.0) {
  * Stop any currently playing speech
  */
 export function stopSpeaking() {
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-  }
+  window.speechSynthesis.cancel();
 }
 
-export default {
-  speakText,
-  stopSpeaking
-};
+/**
+ * Check if ElevenLabs is configured
+ * @returns {boolean}
+ */
+export function isElevenLabsConfigured() {
+  return !!ELEVENLABS_API_KEY;
+}
+
+export default { speakText, stopSpeaking, isElevenLabsConfigured };
