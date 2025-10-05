@@ -1,76 +1,39 @@
+// src/App.jsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-
-// Pages
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import InterviewSimulator from './pages/InterviewSimulator';
 import PronunciationLab from './pages/PronunciationLab';
-import VocabularyHub from './pages/VocabularyHub';
+import WritingPractice from './pages/WritingPractice';
 import GrammarHub from './pages/GrammarHub';
-import BusinessEnglish from './pages/BusinessEnglish';
-import WritingStudio from './pages/WritingStudio';
+import VocabularyBuilder from './pages/VocabularyBuilder';
+import ReadingComprehension from './pages/ReadingComprehension';
+import LandingPage from './pages/LandingPage';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* Public routes */}
+          {/* Public Routes - No login required */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
           
-          {/* Protected routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
+          {/* Guest Mode Routes - Available to everyone */}
+          <Route path="/interview" element={<InterviewSimulator />} />
+          <Route path="/pronunciation" element={<PronunciationLab />} />
+          <Route path="/writing" element={<WritingPractice />} />
+          <Route path="/grammar" element={<GrammarHub />} />
+          <Route path="/vocabulary" element={<VocabularyBuilder />} />
+          <Route path="/reading" element={<ReadingComprehension />} />
           
-          <Route path="/interviews" element={
-            <ProtectedRoute>
-              <InterviewSimulator />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/pronunciation" element={
-            <ProtectedRoute>
-              <PronunciationLab />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/vocabulary" element={
-            <ProtectedRoute>
-              <VocabularyHub />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/grammar" element={
-            <ProtectedRoute>
-              <GrammarHub />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/business-english" element={
-            <ProtectedRoute>
-              <BusinessEnglish />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/writing" element={
-            <ProtectedRoute>
-              <WritingStudio />
-            </ProtectedRoute>
-          } />
-          
-          {/* Redirect root to dashboard or login */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Dashboard requires login */}
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   );
 }
 
