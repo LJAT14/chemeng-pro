@@ -1,7 +1,9 @@
-// src/pages/WritingPractice.jsx
-import React, { useState } from 'react';
+ import React, { useState, useEffect } from 'react';
 import { FileText, Send, Clock, Target, BookOpen, Award } from 'lucide-react';
 import { useAIChat } from '../hooks/useAIChat';
+import PageWrapper from '../components/PageWrapper';
+import { useToast } from '../components/Toast';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 
 const writingPrompts = {
   toefl: [
@@ -84,7 +86,34 @@ const WritingPractice = () => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
   const { sendMessage } = useAIChat();
+  const toast = useToast();
+
+  // Auto-save draft every 3 seconds
+  useEffect(() => {
+    if (essay && selectedPrompt) {
+      const timer = setTimeout(() => {
+        const draftKey = `draft_${selectedPrompt.id}`;
+        localStorage.setItem(draftKey, essay);
+        setLastSaved(new Date());
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [essay, selectedPrompt]);
+
+  // Load saved draft when prompt is selected
+  useEffect(() => {
+    if (selectedPrompt) {
+      const draftKey = `draft_${selectedPrompt.id}`;
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        setEssay(savedDraft);
+        toast.info('Draft loaded from previous session');
+      }
+    }
+  }, [selectedPrompt]);
 
   const startWriting = (prompt) => {
     setSelectedPrompt(prompt);
@@ -107,12 +136,13 @@ const WritingPractice = () => {
 
   const submitEssay = async () => {
     if (!essay.trim()) {
-      alert('Please write something before submitting');
+      toast.error('Please write something before submitting');
       return;
     }
 
     setLoading(true);
     setIsTimerActive(false);
+    toast.info('Submitting your essay for AI feedback...');
 
     const wordCount = essay.trim().split(/\s+/).length;
     const prompt = `You are an English writing instructor. Evaluate this essay and provide detailed feedback.
@@ -142,8 +172,13 @@ Be constructive and specific.`;
         wordCount,
         score: extractScore(response)
       });
+      
+      // Clear draft after submission
+      const draftKey = `draft_${selectedPrompt.id}`;
+      localStorage.removeItem(draftKey);
+      toast.success('Feedback received!');
     } catch (error) {
-      alert('Failed to get feedback. Please try again.');
+      toast.error('Failed to get feedback. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -163,17 +198,12 @@ Be constructive and specific.`;
   const wordCount = essay.trim() ? essay.trim().split(/\s+/).length : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Writing Practice</h1>
-          <p className="text-gray-300">Improve your writing skills with structured practice and AI feedback</p>
-        </div>
-
+    <PageWrapper title="Writing Practice" subtitle="Improve your writing skills with structured practice and AI feedback">
+      <div className="space-y-6">
         {!selectedPrompt ? (
           <>
             {/* Category Selection */}
-            <div className="mb-6 flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-wrap">
               {Object.keys(writingPrompts).map((category) => (
                 <button
                   key={category}
@@ -241,12 +271,17 @@ Be constructive and specific.`;
 
                 {/* Text Editor */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                     <h3 className="text-white font-semibold text-lg">Your Essay</h3>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
                       <span className={`text-sm ${wordCount < selectedPrompt.wordTarget ? 'text-yellow-400' : 'text-green-400'}`}>
                         {wordCount} / {selectedPrompt.wordTarget} words
                       </span>
+                      {lastSaved && (
+                        <span className="text-xs text-gray-500">
+                          Saved {new Date(lastSaved).toLocaleTimeString()}
+                        </span>
+                      )}
                       {isTimerActive && (
                         <div className={`flex items-center gap-2 px-3 py-1 rounded-lg ${
                           timeRemaining < 300 ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'
@@ -271,8 +306,17 @@ Be constructive and specific.`;
                       disabled={loading || !essay.trim()}
                       className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-all"
                     >
-                      <Send className="w-5 h-5" />
-                      {loading ? 'Getting Feedback...' : 'Submit for Feedback'}
+                      {loading ? (
+                        <>
+                          <LoadingSpinner size="sm" color="white" />
+                          Getting Feedback...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5" />
+                          Submit for Feedback
+                        </>
+                      )}
                     </button>
 
                     <button
@@ -344,7 +388,7 @@ Be constructive and specific.`;
           </>
         )}
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 

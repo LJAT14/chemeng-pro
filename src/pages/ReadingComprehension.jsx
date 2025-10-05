@@ -160,35 +160,37 @@ Carbon capture and storage (CCS) technology offers a way to reduce emissions fro
 ];
 
 const ReadingComprehension = () => {
+  const toast = useToast();
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [userAnswers, setUserAnswers] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
 
-  const playAudio = () => {
+  const playAudio = async () => {
     if (!selectedArticle) return;
 
     if (isPlaying) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsPlaying(false);
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(selectedArticle.text);
-    utterance.rate = playbackSpeed;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+    setIsLoadingAudio(true);
+    setIsPlaying(true);
 
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.startsWith('en-')) || voices[0];
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
-
-    window.speechSynthesis.speak(utterance);
+    try {
+      await speakText(selectedArticle.text, playbackSpeed);
+      setIsPlaying(false);
+      toast.success('Audio playback complete');
+    } catch (error) {
+      console.error('Audio playback error:', error);
+      setIsPlaying(false);
+      toast.error('Could not play audio');
+    } finally {
+      setIsLoadingAudio(false);
+    }
   };
 
   const handleAnswer = (questionIdx, answerIdx) => {
@@ -205,7 +207,7 @@ const ReadingComprehension = () => {
     setSelectedArticle(null);
     setUserAnswers([]);
     setShowResults(false);
-    window.speechSynthesis.cancel();
+    stopSpeaking();
     setIsPlaying(false);
   };
 
@@ -218,13 +220,8 @@ const ReadingComprehension = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Reading Comprehension</h1>
-          <p className="text-gray-300">Read technical articles and test your understanding</p>
-        </div>
-
+    <PageWrapper title="Reading Comprehension" subtitle="Read technical articles and test your understanding">
+      <div className="space-y-6">
         {!selectedArticle ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {readingArticles.map((article) => (
@@ -261,21 +258,26 @@ const ReadingComprehension = () => {
           <div className="max-w-4xl mx-auto">
             {!showResults ? (
               <>
-                {/* Article */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 mb-6 border border-white/20">
                   <h2 className="text-3xl font-bold text-white mb-4">{selectedArticle.title}</h2>
                   
-                  {/* Audio Controls */}
-                  <div className="flex items-center gap-4 mb-6 p-4 bg-white/5 rounded-lg">
+                  <div className="flex items-center gap-4 mb-6 p-4 bg-white/5 rounded-lg flex-wrap">
                     <button
                       onClick={playAudio}
-                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all"
+                      disabled={isLoadingAudio}
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-all"
                     >
-                      {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                      {isPlaying ? 'Pause' : 'Listen'}
+                      {isLoadingAudio ? (
+                        <LoadingSpinner size="sm" color="white" />
+                      ) : isPlaying ? (
+                        <Pause className="w-5 h-5" />
+                      ) : (
+                        <Play className="w-5 h-5" />
+                      )}
+                      {isPlaying ? 'Stop' : 'Listen to Article'}
                     </button>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Volume2 className="w-5 h-5 text-gray-400" />
                       <span className="text-gray-300 text-sm">Speed:</span>
                       {[0.75, 1.0, 1.25].map(speed => (
@@ -299,7 +301,6 @@ const ReadingComprehension = () => {
                   </div>
                 </div>
 
-                {/* Questions */}
                 <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
                   <h3 className="text-2xl font-bold text-white mb-6">Comprehension Questions</h3>
 
@@ -352,7 +353,6 @@ const ReadingComprehension = () => {
                   {calculateScore()} / {selectedArticle.questions.length}
                 </p>
 
-                {/* Review */}
                 <div className="text-left space-y-4 mb-8">
                   {selectedArticle.questions.map((q, idx) => (
                     <div key={idx} className="bg-white/5 rounded-lg p-4">
@@ -387,7 +387,7 @@ const ReadingComprehension = () => {
           </div>
         )}
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 
