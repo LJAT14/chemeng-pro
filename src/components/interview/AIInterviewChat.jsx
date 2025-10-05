@@ -4,6 +4,7 @@ import { transcribeAudio } from '../../services/groqWhisperService';
 import { useAIChat } from '../../hooks/useAIChat';
 import { speakText } from '../../services/elevenLabsTTS';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 const AIInterviewChat = ({ questions }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -13,6 +14,7 @@ const AIInterviewChat = ({ questions }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interviewAnswers, setInterviewAnswers] = useState([]);
   const [sessionId, setSessionId] = useState(null);
+  const [sessionStartTime, setSessionStartTime] = useState(null);
   
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -21,34 +23,54 @@ const AIInterviewChat = ({ questions }) => {
   const durationIntervalRef = useRef(null);
 
   const { messages, sendMessage, isLoading } = useAIChat();
+  const { user } = useAuth();
 
   const currentQuestion = questions[currentQuestionIndex];
 
   // Initialize session when component mounts
   useEffect(() => {
-    const initSession = async () => {
-      if (isSupabaseConfigured()) {
-        // Create new interview session
-        const { data, error } = await supabase
-          .from('interview_sessions')
-          .insert([
-            {
-              started_at: new Date().toISOString(),
-              total_questions: questions.length,
-              status: 'in_progress'
-            }
-          ])
-          .select()
-          .single();
-
-        if (!error && data) {
-          setSessionId(data.id);
-        }
+    initSession();
+    return () => {
+      // Cleanup on unmount
+      if (sessionId && isSupabaseConfigured() && user) {
+        completeSession();
       }
     };
-
-    initSession();
   }, []);
+
+  const initSession = async () => {
+    if (!isSupabaseConfigured() || !user) {
+      console.log('Supabase not configured or user not logged in - interview will not be saved');
+      return;
+    }
+
+    try {
+      const startTime = new Date().toISOString();
+      setSessionStartTime(startTime);
+
+      const { data, error } = await supabase
+        .from('interview_sessions')
+        .insert([
+          {
+            user_id: user.id,
+            started_at: startTime,
+            total_questions: questions.length,
+            status: 'in_progress'
+          }
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Failed to create session:', error);
+      } else if (data) {
+        setSessionId(data.id);
+        console.log('Interview session created:', data.id);
+      }
+    } catch (error) {
+      console.error('Error initializing session:', error);
+    }
+  };
 
   // Speak question aloud
   const speakQuestion = async (text) => {
@@ -175,11 +197,15 @@ const AIInterviewChat = ({ questions }) => {
 
   // Save answer to database
   const saveAnswerToDatabase = async (questionText, answerText, aiFeedback) => {
-    if (!isSupabaseConfigured() || !sessionId) return;
+    if (!isSupabaseConfigured() || !sessionId || !user) {
+      console.log('Skipping database save - not configured or no session');
+      return;
+    }
 
     try {
       await supabase.from('interview_answers').insert([
         {
+          user_id: user.id,
           session_id: sessionId,
           question_number: currentQuestionIndex + 1,
           question_text: questionText,
@@ -190,14 +216,71 @@ const AIInterviewChat = ({ questions }) => {
           answered_at: new Date().toISOString()
         }
       ]);
+
+      console.log('Answer saved to database');
     } catch (error) {
       console.error('Failed to save answer:', error);
     }
   };
 
+  // Update user progress
+  const updateUserProgress = async () => {
+    if (!isSupabaseConfigured() || !user) return;
+
+    try {
+      // Calculate practice time (in minutes)
+      const practiceTime = sessionStartTime 
+        ? Math.floor((Date.now() - new Date(sessionStartTime).getTime()) / 60000)
+        : 0;
+
+      // Get current progress
+      const { data: currentProgress } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const today = new Date().toISOString().split('T')[0];
+      const lastPracticeDate = currentProgress?.last_practice_date;
+      
+      let newStreak = 1;
+      if (lastPracticeDate) {
+        const lastDate = new Date(lastPracticeDate);
+        const diffDays = Math.floor((new Date(today) - lastDate) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) {
+          newStreak = currentProgress.current_streak;
+        } else if (diffDays === 1) {
+          newStreak = (currentProgress.current_streak || 0) + 1;
+        } else {
+          newStreak = 1;
+        }
+      }
+
+      const longestStreak = Math.max(newStreak, currentProgress?.longest_streak || 0);
+
+      // Update progress
+      await supabase
+        .from('user_progress')
+        .upsert({
+          user_id: user.id,
+          total_interviews: (currentProgress?.total_interviews || 0) + 1,
+          total_practice_time: (currentProgress?.total_practice_time || 0) + practiceTime,
+          current_streak: newStreak,
+          longest_streak: longestStreak,
+          last_practice_date: today,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      console.log('User progress updated');
+    } catch (error) {
+      console.error('Failed to update progress:', error);
+    }
+  };
+
   // Complete interview session
   const completeSession = async () => {
-    if (!isSupabaseConfigured() || !sessionId) return;
+    if (!isSupabaseConfigured() || !sessionId || !user) return;
 
     try {
       await supabase
@@ -208,6 +291,11 @@ const AIInterviewChat = ({ questions }) => {
           questions_answered: interviewAnswers.length
         })
         .eq('id', sessionId);
+
+      // Update user progress
+      await updateUserProgress();
+
+      console.log('Session completed');
     } catch (error) {
       console.error('Failed to complete session:', error);
     }
@@ -247,7 +335,7 @@ const AIInterviewChat = ({ questions }) => {
       setTranscript('');
     } else {
       await completeSession();
-      alert('Interview complete! Check your performance dashboard.');
+      alert('Interview complete! Check your dashboard to see your progress.');
     }
   };
 
@@ -396,10 +484,18 @@ const AIInterviewChat = ({ questions }) => {
       )}
 
       {/* Session Info */}
-      {isSupabaseConfigured() && sessionId && (
+      {isSupabaseConfigured() && sessionId && user && (
         <div className="mt-6 p-3 bg-white/5 rounded-lg border border-white/10">
           <p className="text-gray-400 text-xs">
-            Session ID: {sessionId} • Answers saved: {interviewAnswers.length}
+            Session ID: {sessionId.substring(0, 8)}... • User: {user.email} • Answers saved: {interviewAnswers.length}
+          </p>
+        </div>
+      )}
+
+      {!user && (
+        <div className="mt-6 p-3 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+          <p className="text-yellow-200 text-sm">
+            Not logged in - Your interview progress will not be saved. Please login to track your progress.
           </p>
         </div>
       )}

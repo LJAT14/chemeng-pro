@@ -6,13 +6,13 @@ const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - natural female voice
 /**
  * Convert text to speech using ElevenLabs API
  * @param {string} text - Text to speak
+ * @param {number} speed - Playback speed (0.5 to 2.0)
  * @returns {Promise<void>}
  */
-export async function speakText(text) {
+export async function speakText(text, speed = 1.0) {
   if (!ELEVENLABS_API_KEY) {
     console.warn('ElevenLabs API key not configured, using browser TTS instead');
-    // Fallback to browser TTS
-    return speakWithBrowser(text);
+    return speakWithBrowser(text, speed);
   }
 
   try {
@@ -45,6 +45,9 @@ export async function speakText(text) {
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
+    
+    // Set playback speed
+    audio.playbackRate = speed;
 
     return new Promise((resolve, reject) => {
       audio.onended = () => {
@@ -62,17 +65,17 @@ export async function speakText(text) {
 
   } catch (error) {
     console.error('ElevenLabs TTS error:', error);
-    // Fallback to browser TTS
-    return speakWithBrowser(text);
+    return speakWithBrowser(text, speed);
   }
 }
 
 /**
  * Fallback to browser's built-in speech synthesis
  * @param {string} text - Text to speak
+ * @param {number} speed - Playback speed (0.5 to 2.0)
  * @returns {Promise<void>}
  */
-function speakWithBrowser(text) {
+function speakWithBrowser(text, speed = 1.0) {
   if (!('speechSynthesis' in window)) {
     console.warn('Speech synthesis not supported');
     return Promise.resolve();
@@ -80,10 +83,20 @@ function speakWithBrowser(text) {
 
   return new Promise((resolve) => {
     window.speechSynthesis.cancel();
+    
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
+    utterance.rate = speed;
     utterance.pitch = 1;
     utterance.volume = 1;
+    
+    // Try to get a better voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
+                        || voices.find(v => v.lang.startsWith('en'));
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
     utterance.onend = resolve;
     utterance.onerror = resolve;
     window.speechSynthesis.speak(utterance);

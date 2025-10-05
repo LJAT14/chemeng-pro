@@ -64,20 +64,41 @@ const PronunciationLab = () => {
   const [scores, setScores] = useState({});
   const [filterDifficulty, setFilterDifficulty] = useState('all');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(0.8); // Default slower speed
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
 
-  const speakWord = (word) => {
+  const speakWord = (word, speed = playbackSpeed) => {
     if ('speechSynthesis' in window) {
       setIsSpeaking(true);
-      const utterance = new SpeechSynthesisUtterance(word);
-      utterance.rate = 0.8;
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
+      
+      // Cancel any ongoing speech
       window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.rate = speed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      // Try to get a better voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google')) 
+                          || voices.find(v => v.lang.startsWith('en'));
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        alert('Speech synthesis failed. Your browser may not support it.');
+      };
+      
       window.speechSynthesis.speak(utterance);
+    } else {
+      alert('Text-to-speech not supported in your browser. Try Chrome or Edge.');
     }
   };
 
@@ -226,6 +247,17 @@ const PronunciationLab = () => {
             </button>
           ))}
         </div>
+
+        {!selectedWord && (
+          <div className="mb-6 p-4 bg-blue-500/20 rounded-lg border border-blue-500/30 text-center">
+            <p className="text-blue-200 text-lg font-semibold">
+              👆 Click on any word card below to practice pronunciation
+            </p>
+            <p className="text-blue-300 text-sm mt-2">
+              Select a word to listen and record your pronunciation
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWords.map((word) => {
