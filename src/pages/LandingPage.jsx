@@ -80,7 +80,7 @@ const LandingPage = () => {
             <div className="flex items-center gap-2">
               <Sparkles className="w-8 h-8 text-purple-400" />
               <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                ChemEng Pro
+                Bacana English
               </h1>
             </div>
             <button
@@ -166,7 +166,7 @@ const LandingPage = () => {
       <div className="bg-white/5 backdrop-blur-lg border-y border-white/10 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white text-center mb-12">
-            Why ChemEng Pro?
+            Why Bacana English?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {benefits.map((benefit, index) => (
