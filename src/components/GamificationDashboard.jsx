@@ -1,4 +1,4 @@
-// src/components/GamificationDashboard.jsx
+
 import React, { useState, useEffect } from 'react';
 import { Trophy, Star, Flame, Target, Award, TrendingUp } from 'lucide-react';
 import { calculateLevel, getProgressToNextLevel, BADGES, checkBadgeEarned } from '../utils/gamificationSystem';
