@@ -1,4 +1,5 @@
- import React from 'react';
+// src/components/PageWrapper.jsx
+import React from 'react';
 
 const PageWrapper = ({ children, title, subtitle, maxWidth = '7xl' }) => {
   const widths = {
