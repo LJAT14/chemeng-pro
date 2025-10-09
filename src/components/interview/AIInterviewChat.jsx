@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Send, Volume2, StopCircle, TrendingUp } from 'lucide-react';
+import { Mic, Send, Volume2, StopCircle, TrendingUp, VolumeX } from 'lucide-react';
 import { transcribeAudio } from '../../services/groqWhisperService';
 import { useAIChat } from '../../hooks/useAIChat';
 import { speakText } from '../../services/elevenLabsTTS';
@@ -21,6 +21,7 @@ const AIInterviewChat = ({ questions }) => {
   const streamRef = useRef(null);
   const recordingStartTimeRef = useRef(null);
   const durationIntervalRef = useRef(null);
+  const audioControllerRef = useRef(null); // NEW: For controlling audio playback
 
   const { messages, sendMessage, isLoading } = useAIChat();
   const { user } = useAuth();
@@ -35,6 +36,7 @@ const AIInterviewChat = ({ questions }) => {
       if (sessionId && isSupabaseConfigured() && user) {
         completeSession();
       }
+      stopAudioPlayback(); // NEW: Stop audio on unmount
     };
   }, []);
 
@@ -72,11 +74,30 @@ const AIInterviewChat = ({ questions }) => {
     }
   };
 
+  // NEW: Stop audio playback function
+  const stopAudioPlayback = () => {
+    // Stop Web Speech API if being used
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    
+    // If using ElevenLabs with audio element, stop it
+    if (audioControllerRef.current) {
+      audioControllerRef.current.pause();
+      audioControllerRef.current.currentTime = 0;
+      audioControllerRef.current = null;
+    }
+    
+    setIsSpeaking(false);
+  };
+
   // Speak question aloud
   const speakQuestion = async (text) => {
+    stopAudioPlayback(); // Stop any current audio
     setIsSpeaking(true);
     try {
-      await speakText(text);
+      const audio = await speakText(text);
+      audioControllerRef.current = audio; // Store reference if speakText returns audio element
     } catch (error) {
       console.error('Speech error:', error);
     } finally {
@@ -228,12 +249,10 @@ const AIInterviewChat = ({ questions }) => {
     if (!isSupabaseConfigured() || !user) return;
 
     try {
-      // Calculate practice time (in minutes)
       const practiceTime = sessionStartTime 
         ? Math.floor((Date.now() - new Date(sessionStartTime).getTime()) / 60000)
         : 0;
 
-      // Get current progress
       const { data: currentProgress } = await supabase
         .from('user_progress')
         .select('*')
@@ -259,7 +278,6 @@ const AIInterviewChat = ({ questions }) => {
 
       const longestStreak = Math.max(newStreak, currentProgress?.longest_streak || 0);
 
-      // Update progress
       await supabase
         .from('user_progress')
         .upsert({
@@ -292,7 +310,6 @@ const AIInterviewChat = ({ questions }) => {
         })
         .eq('id', sessionId);
 
-      // Update user progress
       await updateUserProgress();
 
       console.log('Session completed');
@@ -310,26 +327,34 @@ const AIInterviewChat = ({ questions }) => {
     const questionText = currentQuestion.question.en;
     const aiResponse = await sendMessage(`Question: ${questionText}\n\nMy Answer: ${transcript}`);
     
-    // Save to database
     await saveAnswerToDatabase(questionText, transcript, aiResponse);
 
-    // Save to local state for display
     setInterviewAnswers(prev => [...prev, {
       question: questionText,
       answer: transcript,
       feedback: aiResponse
     }]);
 
-    // Speak feedback
+    // Speak feedback with ability to stop
     if (aiResponse) {
+      setIsSpeaking(true);
       try {
-        await speakText(aiResponse);
+        const audio = await speakText(aiResponse);
+        audioControllerRef.current = audio;
+        
+        // Listen for audio end
+        if (audio && audio.addEventListener) {
+          audio.addEventListener('ended', () => {
+            setIsSpeaking(false);
+            audioControllerRef.current = null;
+          });
+        }
       } catch (error) {
         console.error('Failed to speak feedback:', error);
+        setIsSpeaking(false);
       }
     }
     
-    // Move to next question or finish
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setTranscript('');
@@ -347,7 +372,7 @@ const AIInterviewChat = ({ questions }) => {
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
       }
-      window.speechSynthesis.cancel();
+      stopAudioPlayback();
     };
   }, []);
 
@@ -386,14 +411,26 @@ const AIInterviewChat = ({ questions }) => {
           <h3 className="text-white font-semibold text-lg">
             Question {currentQuestionIndex + 1}
           </h3>
-          <button
-            onClick={() => speakQuestion(currentQuestion.question.en)}
-            disabled={isSpeaking}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg flex items-center gap-2 text-sm transition-colors"
-          >
-            <Volume2 className="w-4 h-4" />
-            {isSpeaking ? 'Speaking...' : 'Listen'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => speakQuestion(currentQuestion.question.en)}
+              disabled={isSpeaking}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg flex items-center gap-2 text-sm transition-colors"
+            >
+              <Volume2 className="w-4 h-4" />
+              {isSpeaking ? 'Speaking...' : 'Listen'}
+            </button>
+            {/* NEW: Stop Audio Button */}
+            {isSpeaking && (
+              <button
+                onClick={stopAudioPlayback}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors"
+              >
+                <VolumeX className="w-4 h-4" />
+                Stop
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-white text-xl leading-relaxed">
           {currentQuestion.question.en}
@@ -466,10 +503,22 @@ const AIInterviewChat = ({ questions }) => {
       {/* AI Feedback */}
       {messages.length > 0 && (
         <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-6">
-          <h4 className="text-green-200 font-semibold mb-2 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            AI Feedback:
-          </h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-green-200 font-semibold flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              AI Feedback:
+            </h4>
+            {/* NEW: Stop Button for Feedback Audio */}
+            {isSpeaking && (
+              <button
+                onClick={stopAudioPlayback}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors"
+              >
+                <VolumeX className="w-4 h-4" />
+                Stop Audio
+              </button>
+            )}
+          </div>
           <div className="text-white leading-relaxed">
             {messages[messages.length - 1].content}
           </div>
