@@ -1,358 +1,384 @@
-// src/pages/VocabularyBuilder.jsx
-import React, { useState } from 'react';
-import { BookOpen, Volume2, CheckCircle, XCircle, Star, Play, Filter } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Volume2, CheckCircle, XCircle, Star, Play, Filter, Brain, TrendingUp, Calendar } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
-import { useToast } from '../components/Toast';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import { vocabularyData, VOCABULARY_CATEGORIES } from '../data/vocabularyData';
-import { speakText } from '../services/elevenLabsTTS';
+import { 
+  calculateNextReview, 
+  isDueForReview, 
+  getDueWords, 
+  getMasteryLevel, 
+  getMasteryColor,
+  getDaysUntilReview,
+  sortByReviewPriority,
+  calculateStudyStats,
+  DIFFICULTY_LEVELS 
+} from '../utils/spacedRepetition';
 
 const VocabularyBuilder = () => {
-  const toast = useToast();
+  const { user } = useAuth();
+  const [mode, setMode] = useState('review'); // 'review', 'browse', 'quiz'
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [mode, setMode] = useState('browse'); // browse, flashcard, quiz
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showDefinition, setShowDefinition] = useState(false);
-  const [quizAnswers, setQuizAnswers] = useState([]);
-  const [showQuizResults, setShowQuizResults] = useState(false);
-  const [savedWords, setSavedWords] = useState([]);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [userProgress, setUserProgress] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const filteredVocab = vocabularyData.filter(w => {
-    const categoryMatch = selectedCategory === 'all' || w.category === selectedCategory;
-    const difficultyMatch = selectedDifficulty === 'all' || w.difficulty === selectedDifficulty;
-    return categoryMatch && difficultyMatch;
-  });
+  useEffect(() => {
+    if (user) {
+      fetchUserProgress();
+    }
+  }, [user]);
 
-  const playAudio = async (text) => {
-    if (isPlaying) return;
-    
-    setIsPlaying(true);
+  const fetchUserProgress = async () => {
     try {
-      await speakText(text, 0.8);
+      const { data, error } = await supabase
+        .from('vocabulary_progress')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setUserProgress(data || []);
+      
+      // Calculate stats
+      if (data && data.length > 0) {
+        const studyStats = calculateStudyStats(data);
+        setStats(studyStats);
+      } else {
+        setStats({
+          total: 0,
+          dueToday: vocabularyData.length,
+          mastered: 0,
+          learning: 0,
+          masteryPercentage: 0,
+        });
+      }
     } catch (error) {
-      toast.error('Audio playback failed');
+      console.error('Error fetching vocabulary progress:', error);
     } finally {
-      setIsPlaying(false);
+      setLoading(false);
     }
   };
 
-  const toggleSave = (wordId) => {
-    const newSaved = savedWords.includes(wordId) 
-      ? savedWords.filter(id => id !== wordId)
-      : [...savedWords, wordId];
-    setSavedWords(newSaved);
-    localStorage.setItem('savedWords', JSON.stringify(newSaved));
-    
-    toast.success(
-      savedWords.includes(wordId) ? 'Word removed from favorites' : 'Word saved to favorites'
+  const getWordProgress = (wordId) => {
+    return userProgress.find(p => p.word_id === wordId) || null;
+  };
+
+  const getWordsForReview = () => {
+    // Get words that are due for review
+    const wordsWithProgress = vocabularyData.map(word => {
+      const progress = getWordProgress(word.id);
+      return {
+        ...word,
+        progress,
+        isDue: !progress || isDueForReview(progress.next_review),
+      };
+    });
+
+    // Filter by category
+    const filtered = selectedCategory === 'all' 
+      ? wordsWithProgress 
+      : wordsWithProgress.filter(w => w.category === selectedCategory);
+
+    // In review mode, only show due words
+    if (mode === 'review') {
+      const dueWords = filtered.filter(w => w.isDue);
+      return sortByReviewPriority(dueWords.map(w => w.progress).filter(p => p));
+    }
+
+    return filtered;
+  };
+
+  const handleReview = async (difficulty) => {
+    const words = getWordsForReview();
+    const currentWord = words[currentWordIndex];
+    const progress = getWordProgress(currentWord.id);
+
+    // Calculate next review schedule
+    const schedule = calculateNextReview(
+      difficulty,
+      progress?.times_practiced || 0,
+      progress?.ease_factor || 2.5,
+      progress?.interval || 1
     );
+
+    try {
+      // Update or insert progress
+      const { error } = await supabase
+        .from('vocabulary_progress')
+        .upsert({
+          user_id: user.id,
+          word_id: currentWord.id,
+          times_practiced: schedule.repetitions,
+          ease_factor: schedule.easeFactor,
+          interval: schedule.interval,
+          next_review: schedule.nextReview,
+          last_practiced: new Date().toISOString(),
+          mastered: schedule.repetitions >= 10,
+        }, {
+          onConflict: 'user_id,word_id'
+        });
+
+      if (error) throw error;
+
+      // Log activity
+      await supabase.from('activity_log').insert({
+        user_id: user.id,
+        activity_type: 'vocabulary_learned',
+        activity_name: currentWord.term,
+        points: difficulty >= DIFFICULTY_LEVELS.GOOD ? 5 : 2,
+      });
+
+      // Update gamification if word mastered
+      if (schedule.repetitions === 10) {
+        await supabase.rpc('increment_user_stat', {
+          p_user_id: user.id,
+          p_stat_name: 'vocabulary_learned',
+          p_increment: 1,
+        });
+      }
+
+      // Refresh progress
+      await fetchUserProgress();
+
+      // Move to next word
+      setShowAnswer(false);
+      if (currentWordIndex < words.length - 1) {
+        setCurrentWordIndex(currentWordIndex + 1);
+      } else {
+        setCurrentWordIndex(0);
+      }
+    } catch (error) {
+      console.error('Error updating vocabulary progress:', error);
+    }
   };
 
-  const startQuiz = () => {
-    setMode('quiz');
-    setQuizAnswers([]);
-    setShowQuizResults(false);
+  const speakWord = (text) => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
-  const handleQuizAnswer = (wordId, isCorrect) => {
-    setQuizAnswers(prev => [...prev, { wordId, isCorrect }]);
-  };
+  const words = getWordsForReview();
+  const currentWord = words[currentWordIndex];
 
-  const calculateQuizScore = () => {
-    const correct = quizAnswers.filter(a => a.isCorrect).length;
-    return { correct, total: quizAnswers.length };
-  };
-
-  const getCategoryInfo = (categoryId) => {
-    return VOCABULARY_CATEGORIES.find(c => c.id === categoryId) || VOCABULARY_CATEGORIES[0];
-  };
+  if (loading) {
+    return <PageWrapper title="Vocabulary Builder"><div className="text-white">Loading...</div></PageWrapper>;
+  }
 
   return (
-    <PageWrapper title="Vocabulary Builder" subtitle="Master English words by category">
-      <div className="space-y-6">
-        {/* Mode Selection */}
-        <div className="flex gap-3 flex-wrap">
-          <button
-            onClick={() => setMode('browse')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              mode === 'browse' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-            }`}
-          >
-            Browse
-          </button>
-          <button
-            onClick={() => setMode('flashcard')}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              mode === 'flashcard' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-            }`}
-          >
-            Flashcards
-          </button>
-          <button
-            onClick={startQuiz}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              mode === 'quiz' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-            }`}
-          >
-            Quiz Mode
-          </button>
+    <PageWrapper title="Vocabulary Builder" subtitle="Master English vocabulary with spaced repetition">
+      <div className="max-w-6xl mx-auto">
+        
+        {/* Stats Dashboard */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-lg rounded-xl p-4 border border-blue-500/30">
+            <Calendar className="w-8 h-8 text-blue-400 mb-2" />
+            <p className="text-2xl font-bold text-white">{stats?.dueToday || 0}</p>
+            <p className="text-sm text-gray-400">Due Today</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-lg rounded-xl p-4 border border-green-500/30">
+            <CheckCircle className="w-8 h-8 text-green-400 mb-2" />
+            <p className="text-2xl font-bold text-white">{stats?.mastered || 0}</p>
+            <p className="text-sm text-gray-400">Mastered</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-lg rounded-xl p-4 border border-yellow-500/30">
+            <Brain className="w-8 h-8 text-yellow-400 mb-2" />
+            <p className="text-2xl font-bold text-white">{stats?.learning || 0}</p>
+            <p className="text-sm text-gray-400">Learning</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-xl p-4 border border-purple-500/30">
+            <TrendingUp className="w-8 h-8 text-purple-400 mb-2" />
+            <p className="text-2xl font-bold text-white">{stats?.masteryPercentage || 0}%</p>
+            <p className="text-sm text-gray-400">Mastery</p>
+          </div>
         </div>
 
-        {/* Category Grid - Enhanced Display */}
-        {mode === 'browse' && (
-          <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              <button
-                onClick={() => setSelectedCategory('all')}
-                className={`p-4 rounded-xl transition-all ${
-                  selectedCategory === 'all'
-                    ? 'bg-purple-600 ring-2 ring-purple-400'
-                    : 'bg-white/10 hover:bg-white/20'
-                }`}
-              >
-                <div className="text-3xl mb-2">📚</div>
-                <div className="text-white font-semibold text-sm">All Words</div>
-                <div className="text-gray-400 text-xs">{vocabularyData.length}</div>
-              </button>
-              
-              {VOCABULARY_CATEGORIES.map((category) => {
-                const count = vocabularyData.filter(w => w.category === category.id).length;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`p-4 rounded-xl transition-all ${
-                      selectedCategory === category.id
-                        ? 'bg-purple-600 ring-2 ring-purple-400'
-                        : 'bg-white/10 hover:bg-white/20'
-                    }`}
-                  >
-                    <div className="text-3xl mb-2">{category.icon}</div>
-                    <div className="text-white font-semibold text-sm">{category.name}</div>
-                    <div className="text-gray-400 text-xs">{count} words</div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Filters */}
-            <div className="flex gap-3 items-center flex-wrap">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={selectedDifficulty}
-                onChange={(e) => setSelectedDifficulty(e.target.value)}
-                className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="all">All Levels</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-
-              <div className="ml-auto text-gray-300">
-                {filteredVocab.length} words
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Browse Mode */}
-        {mode === 'browse' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredVocab.map((word) => {
-              const categoryInfo = getCategoryInfo(word.category);
-              return (
-                <div
-                  key={word.id}
-                  className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:border-purple-500 transition-all"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-2xl">{categoryInfo.icon}</span>
-                        <h3 className="text-2xl font-bold text-white">{word.term}</h3>
-                      </div>
-                      <div className="flex gap-2 mb-3">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          word.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
-                          word.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          {word.difficulty}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded ${categoryInfo.color}`}>
-                          {categoryInfo.name}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleSave(word.id)}
-                      className="ml-2"
-                    >
-                      <Star className={`w-6 h-6 ${savedWords.includes(word.id) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-400'}`} />
-                    </button>
-                  </div>
-
-                  <p className="text-gray-300 mb-3">{word.definition}</p>
-                  <div className="bg-white/5 rounded-lg p-3 mb-3">
-                    <p className="text-gray-400 text-sm italic">"{word.example}"</p>
-                  </div>
-
-                  <button
-                    onClick={() => playAudio(word.term)}
-                    disabled={isPlaying}
-                    className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-all disabled:opacity-50"
-                  >
-                    <Volume2 className="w-4 h-4" />
-                    Hear pronunciation
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Flashcard Mode */}
-        {mode === 'flashcard' && filteredVocab.length > 0 && (
-          <div className="max-w-2xl mx-auto">
-            <div className="mb-6 text-center text-gray-300">
-              Card {currentIndex + 1} of {filteredVocab.length}
-            </div>
-
-            <div
-              onClick={() => setShowDefinition(!showDefinition)}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 border border-white/20 cursor-pointer hover:border-purple-500 transition-all min-h-96 flex flex-col items-center justify-center"
+        {/* Mode & Category Selection */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setMode('review')}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                mode === 'review' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300'
+              }`}
             >
-              {!showDefinition ? (
-                <div className="text-center">
-                  <div className="text-5xl mb-4">{getCategoryInfo(filteredVocab[currentIndex].category).icon}</div>
-                  <h2 className="text-5xl font-bold text-white mb-6">
-                    {filteredVocab[currentIndex]?.term}
-                  </h2>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playAudio(filteredVocab[currentIndex]?.term);
-                    }}
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg mx-auto"
-                  >
-                    <Play className="w-5 h-5" />
-                    Hear it
-                  </button>
-                  <p className="text-gray-400 mt-8">Click to see definition</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <h3 className="text-3xl font-bold text-white mb-4">
-                    {filteredVocab[currentIndex]?.term}
-                  </h3>
-                  <p className="text-xl text-gray-300 mb-4">
-                    {filteredVocab[currentIndex]?.definition}
-                  </p>
-                  <div className="bg-white/5 rounded-lg p-4 mb-6">
-                    <p className="text-gray-400 italic">
-                      "{filteredVocab[currentIndex]?.example}"
-                    </p>
-                  </div>
-                  <p className="text-gray-400">Click to flip back</p>
+              Review ({stats?.dueToday || 0})
+            </button>
+            <button
+              onClick={() => setMode('browse')}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                mode === 'browse' ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300'
+              }`}
+            >
+              Browse All
+            </button>
+          </div>
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => {
+              setSelectedCategory(e.target.value);
+              setCurrentWordIndex(0);
+            }}
+            className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="all">All Categories</option>
+            {VOCABULARY_CATEGORIES.map(cat => (
+              <option key={cat.id} value={cat.id} className="bg-slate-800">
+                {cat.icon} {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Flashcard Area */}
+        {words.length > 0 ? (
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 mb-6">
+            {/* Progress */}
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-gray-400">
+                Card {currentWordIndex + 1} / {words.length}
+              </span>
+              {currentWord.progress && (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-3 py-1 rounded-lg ${getMasteryColor(getMasteryLevel(currentWord.progress.times_practiced, currentWord.progress.ease_factor))}`}>
+                    {getMasteryLevel(currentWord.progress.times_practiced, currentWord.progress.ease_factor)}
+                  </span>
+                  {!isDueForReview(currentWord.progress?.next_review) && (
+                    <span className="text-xs text-gray-500">
+                      Review in {getDaysUntilReview(currentWord.progress.next_review)} days
+                    </span>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="flex gap-4 justify-center mt-6">
-              <button
-                onClick={() => {
-                  setCurrentIndex(Math.max(0, currentIndex - 1));
-                  setShowDefinition(false);
-                }}
-                disabled={currentIndex === 0}
-                className="bg-white/10 hover:bg-white/20 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-all"
-              >
-                Previous
-              </button>
-
-              <button
-                onClick={() => {
-                  setCurrentIndex(Math.min(filteredVocab.length - 1, currentIndex + 1));
-                  setShowDefinition(false);
-                }}
-                disabled={currentIndex === filteredVocab.length - 1}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-all"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Quiz Mode */}
-        {mode === 'quiz' && !showQuizResults && filteredVocab.length > 0 && (
-          <div className="max-w-2xl mx-auto">
-            {filteredVocab.slice(0, 10).map((word, idx) => (
-              <div
-                key={word.id}
-                className="bg-white/10 backdrop-blur-lg rounded-xl p-6 mb-4 border border-white/20"
-              >
-                <p className="text-white font-semibold mb-4">
-                  {idx + 1}. What does "{word.term}" mean?
-                </p>
-
-                <div className="space-y-2">
-                  {[word.definition, 'A type of chemical reaction', 'A safety procedure', 'A measurement unit']
-                    .sort(() => Math.random() - 0.5)
-                    .slice(0, 3)
-                    .concat(word.definition)
-                    .filter((v, i, a) => a.indexOf(v) === i)
-                    .slice(0, 4)
-                    .map((option, oIdx) => (
-                      <button
-                        key={oIdx}
-                        onClick={() => handleQuizAnswer(word.id, option === word.definition)}
-                        disabled={quizAnswers.some(a => a.wordId === word.id)}
-                        className={`w-full text-left p-3 rounded-lg transition-all ${
-                          quizAnswers.find(a => a.wordId === word.id)
-                            ? option === word.definition
-                              ? 'bg-green-600 text-white'
-                              : 'bg-white/5 text-gray-500'
-                            : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                        }`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                </div>
+            {/* Flashcard */}
+            <div 
+              className="min-h-64 flex flex-col items-center justify-center cursor-pointer"
+              onClick={() => setShowAnswer(!showAnswer)}
+            >
+              <div className="text-center mb-6">
+                <h2 className="text-5xl font-bold text-white mb-4">{currentWord.term}</h2>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    speakWord(currentWord.term);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-all mx-auto"
+                >
+                  <Volume2 className="w-5 h-5" />
+                  Pronounce
+                </button>
               </div>
-            ))}
 
-            {quizAnswers.length === Math.min(10, filteredVocab.length) && (
-              <button
-                onClick={() => setShowQuizResults(true)}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-all"
-              >
-                See Results
-              </button>
+              {showAnswer ? (
+                <div className="text-center space-y-4 animate-fade-in">
+                  <p className="text-2xl text-gray-300">{currentWord.definition}</p>
+                  <p className="text-lg text-gray-400 italic">"{currentWord.example}"</p>
+                  <span className={`inline-block px-3 py-1 rounded-lg text-sm ${VOCABULARY_CATEGORIES.find(c => c.id === currentWord.category)?.color || 'bg-gray-500/20 text-gray-400'}`}>
+                    {VOCABULARY_CATEGORIES.find(c => c.id === currentWord.category)?.name}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center">Click to reveal definition</p>
+              )}
+            </div>
+
+            {/* Review Buttons */}
+            {showAnswer && mode === 'review' && (
+              <div className="grid grid-cols-4 gap-3 mt-8">
+                <button
+                  onClick={() => handleReview(DIFFICULTY_LEVELS.AGAIN)}
+                  className="px-4 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg font-semibold transition-all border border-red-500/30"
+                >
+                  Again<br/><span className="text-xs">1 day</span>
+                </button>
+                <button
+                  onClick={() => handleReview(DIFFICULTY_LEVELS.HARD)}
+                  className="px-4 py-3 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg font-semibold transition-all border border-yellow-500/30"
+                >
+                  Hard<br/><span className="text-xs">2 days</span>
+                </button>
+                <button
+                  onClick={() => handleReview(DIFFICULTY_LEVELS.GOOD)}
+                  className="px-4 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg font-semibold transition-all border border-green-500/30"
+                >
+                  Good<br/><span className="text-xs">6 days</span>
+                </button>
+                <button
+                  onClick={() => handleReview(DIFFICULTY_LEVELS.EASY)}
+                  className="px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg font-semibold transition-all border border-blue-500/30"
+                >
+                  Easy<br/><span className="text-xs">10+ days</span>
+                </button>
+              </div>
+            )}
+
+            {/* Navigation */}
+            {mode === 'browse' && (
+              <div className="flex justify-between mt-6">
+                <button
+                  onClick={() => setCurrentWordIndex(Math.max(0, currentWordIndex - 1))}
+                  disabled={currentWordIndex === 0}
+                  className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentWordIndex(Math.min(words.length - 1, currentWordIndex + 1))}
+                  disabled={currentWordIndex === words.length - 1}
+                  className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             )}
           </div>
-        )}
-
-        {/* Quiz Results */}
-        {mode === 'quiz' && showQuizResults && (
-          <div className="max-w-2xl mx-auto bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-center">
+        ) : (
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 border border-white/20 text-center">
             <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-            <h2 className="text-3xl font-bold text-white mb-2">Quiz Complete!</h2>
-            <p className="text-4xl font-bold text-purple-400 mb-6">
-              {calculateQuizScore().correct} / {calculateQuizScore().total}
+            <h3 className="text-2xl font-bold text-white mb-2">All Done for Today! 🎉</h3>
+            <p className="text-gray-400">
+              {mode === 'review' 
+                ? "You've reviewed all due words. Great job! Come back tomorrow for more."
+                : "No words in this category. Try selecting a different category."}
             </p>
-
-            <button
-              onClick={startQuiz}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg transition-all"
-            >
-              Try Again
-            </button>
           </div>
         )}
+
+        {/* Study Tips */}
+        <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/30">
+          <h3 className="text-xl font-bold text-white mb-4">💡 How Spaced Repetition Works</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300 text-sm">
+            <div>
+              <p className="font-semibold text-white mb-1">Review Schedule</p>
+              <p>Words you find easy are shown less frequently, while difficult words appear more often.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-white mb-1">Optimal Learning</p>
+              <p>Review words just before you forget them for maximum retention.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-white mb-1">Be Honest</p>
+              <p>Rate difficulty accurately to get the best learning schedule.</p>
+            </div>
+            <div>
+              <p className="font-semibold text-white mb-1">Daily Practice</p>
+              <p>Review every day to build vocabulary systematically.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </PageWrapper>
   );
