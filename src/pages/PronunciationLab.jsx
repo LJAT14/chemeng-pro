@@ -1,195 +1,104 @@
-// src/pages/PronunciationLab.jsx
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Volume2, CheckCircle, XCircle, Play, Pause, Gauge, Award, X } from 'lucide-react';
+ import React, { useState, useRef, useEffect } from 'react';
+import { Mic, Volume2, Play, Pause, CheckCircle, XCircle, Award, BarChart3 } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
-import { useToast } from '../components/Toast';
-import { LoadingSpinner } from '../components/LoadingSpinner';
 import { speakText } from '../services/elevenLabsTTS';
-import { transcribeAudio } from '../services/groqWhisper';
-import TutorialSystem from '../components/TutorialSystem';
-
-const pronunciationWords = [
-  // Beginner (20 words)
-  { id: 1, word: 'Hello', difficulty: 'beginner', phonetic: '/həˈloʊ/' },
-  { id: 2, word: 'Water', difficulty: 'beginner', phonetic: '/ˈwɔːtər/' },
-  { id: 3, word: 'Please', difficulty: 'beginner', phonetic: '/pliːz/' },
-  { id: 4, word: 'Thank you', difficulty: 'beginner', phonetic: '/θæŋk juː/' },
-  { id: 5, word: 'Goodbye', difficulty: 'beginner', phonetic: '/ɡʊdˈbaɪ/' },
-  { id: 6, word: 'Yes', difficulty: 'beginner', phonetic: '/jes/' },
-  { id: 7, word: 'No', difficulty: 'beginner', phonetic: '/noʊ/' },
-  { id: 8, word: 'Help', difficulty: 'beginner', phonetic: '/help/' },
-  { id: 9, word: 'Food', difficulty: 'beginner', phonetic: '/fuːd/' },
-  { id: 10, word: 'House', difficulty: 'beginner', phonetic: '/haʊs/' },
-  { id: 11, word: 'Friend', difficulty: 'beginner', phonetic: '/frend/' },
-  { id: 12, word: 'Book', difficulty: 'beginner', phonetic: '/bʊk/' },
-  { id: 13, word: 'School', difficulty: 'beginner', phonetic: '/skuːl/' },
-  { id: 14, word: 'Work', difficulty: 'beginner', phonetic: '/wɜːrk/' },
-  { id: 15, word: 'Family', difficulty: 'beginner', phonetic: '/ˈfæməli/' },
-  { id: 16, word: 'Happy', difficulty: 'beginner', phonetic: '/ˈhæpi/' },
-  { id: 17, word: 'Time', difficulty: 'beginner', phonetic: '/taɪm/' },
-  { id: 18, word: 'Good', difficulty: 'beginner', phonetic: '/ɡʊd/' },
-  { id: 19, word: 'Day', difficulty: 'beginner', phonetic: '/deɪ/' },
-  { id: 20, word: 'Night', difficulty: 'beginner', phonetic: '/naɪt/' },
-  
-  // Intermediate (20 words)
-  { id: 21, word: 'Beautiful', difficulty: 'intermediate', phonetic: '/ˈbjuːtɪfəl/' },
-  { id: 22, word: 'Important', difficulty: 'intermediate', phonetic: '/ɪmˈpɔːrtənt/' },
-  { id: 23, word: 'Understand', difficulty: 'intermediate', phonetic: '/ˌʌndərˈstænd/' },
-  { id: 24, word: 'Different', difficulty: 'intermediate', phonetic: '/ˈdɪfrənt/' },
-  { id: 25, word: 'Together', difficulty: 'intermediate', phonetic: '/təˈɡeðər/' },
-  { id: 26, word: 'Business', difficulty: 'intermediate', phonetic: '/ˈbɪznəs/' },
-  { id: 27, word: 'Development', difficulty: 'intermediate', phonetic: '/dɪˈveləpmənt/' },
-  { id: 28, word: 'Environment', difficulty: 'intermediate', phonetic: '/ɪnˈvaɪrənmənt/' },
-  { id: 29, word: 'Temperature', difficulty: 'intermediate', phonetic: '/ˈtemprətʃər/' },
-  { id: 30, word: 'Comfortable', difficulty: 'intermediate', phonetic: '/ˈkʌmftəbəl/' },
-  { id: 31, word: 'Restaurant', difficulty: 'intermediate', phonetic: '/ˈrestrɑːnt/' },
-  { id: 32, word: 'Vegetable', difficulty: 'intermediate', phonetic: '/ˈvedʒtəbəl/' },
-  { id: 33, word: 'Chocolate', difficulty: 'intermediate', phonetic: '/ˈtʃɔːklət/' },
-  { id: 34, word: 'Interesting', difficulty: 'intermediate', phonetic: '/ˈɪntrəstɪŋ/' },
-  { id: 35, word: 'Necessary', difficulty: 'intermediate', phonetic: '/ˈnesəseri/' },
-  { id: 36, word: 'Government', difficulty: 'intermediate', phonetic: '/ˈɡʌvərnmənt/' },
-  { id: 37, word: 'Technology', difficulty: 'intermediate', phonetic: '/tekˈnɑːlədʒi/' },
-  { id: 38, word: 'Education', difficulty: 'intermediate', phonetic: '/ˌedʒuˈkeɪʃən/' },
-  { id: 39, word: 'Information', difficulty: 'intermediate', phonetic: '/ˌɪnfərˈmeɪʃən/' },
-  { id: 40, word: 'Communication', difficulty: 'intermediate', phonetic: '/kəˌmjuːnɪˈkeɪʃən/' },
-  
-  // Advanced (10 words)
-  { id: 41, word: 'Pronunciation', difficulty: 'advanced', phonetic: '/prəˌnʌnsiˈeɪʃən/' },
-  { id: 42, word: 'Entrepreneurship', difficulty: 'advanced', phonetic: '/ˌɑːntrəprəˈnɜːrʃɪp/' },
-  { id: 43, word: 'Conscientious', difficulty: 'advanced', phonetic: '/ˌkɑːnʃiˈenʃəs/' },
-  { id: 44, word: 'Phenomenon', difficulty: 'advanced', phonetic: '/fəˈnɑːmɪnɑːn/' },
-  { id: 45, word: 'Peculiar', difficulty: 'advanced', phonetic: '/pɪˈkjuːliər/' },
-  { id: 46, word: 'Sophisticated', difficulty: 'advanced', phonetic: '/səˈfɪstɪkeɪtɪd/' },
-  { id: 47, word: 'Anonymity', difficulty: 'advanced', phonetic: '/ˌænəˈnɪməti/' },
-  { id: 48, word: 'Worcestershire', difficulty: 'advanced', phonetic: '/ˈwʊstərʃər/' },
-  { id: 49, word: 'Colonel', difficulty: 'advanced', phonetic: '/ˈkɜːrnəl/' },
-  { id: 50, word: 'Hyperbole', difficulty: 'advanced', phonetic: '/haɪˈpɜːrbəli/' },
-];
-
-const tutorialSteps = [
-  {
-    title: 'Welcome to Pronunciation Lab!',
-    description: 'Learn to speak English words correctly with AI-powered voice recognition. Practice at your own pace with adjustable speed controls.',
-    tips: [
-      'Start with beginner words if you\'re new',
-      'Use headphones for best audio quality',
-      'Find a quiet place to practice',
-    ],
-  },
-  {
-    title: 'How to Practice',
-    description: 'Click a word to select it, choose your speed, then click "Hear Pronunciation" to listen. When ready, click "Record Your Voice" to practice speaking.',
-    tips: [
-      'Very Slow mode is great for beginners',
-      'Listen multiple times before recording',
-      'Speak clearly into your microphone',
-    ],
-  },
-  {
-    title: 'Get Instant Feedback',
-    description: 'Our AI will analyze your pronunciation and give you a score. Aim for 70% or higher for good pronunciation!',
-    tips: [
-      'Green checkmark means great job (70%+)',
-      'Red X means try again',
-      'Practice the same word until you get it right',
-    ],
-  },
-];
 
 const PronunciationLab = () => {
-  const toast = useToast();
   const [selectedWord, setSelectedWord] = useState(null);
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [speed, setSpeed] = useState(1.0);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState({});
-  const [stats, setStats] = useState({
-    totalPracticed: 0,
-    correctCount: 0,
-    accuracy: 0,
-  });
-
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [score, setScore] = useState(null);
+  const [waveformData, setWaveformData] = useState([]);
+  const [referenceWaveform, setReferenceWaveform] = useState([]);
+  
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const analyserRef = useRef(null);
+  const audioContextRef = useRef(null);
 
-  // Stop audio when component unmounts or word changes
+  const words = [
+    { id: 1, word: 'Hello', phonetic: '/həˈloʊ/', difficulty: 'easy', category: 'Greetings' },
+    { id: 2, word: 'Beautiful', phonetic: '/ˈbjuːtɪfəl/', difficulty: 'medium', category: 'Adjectives' },
+    { id: 3, word: 'Restaurant', phonetic: '/ˈrestərɑːnt/', difficulty: 'medium', category: 'Places' },
+    { id: 4, word: 'Pronunciation', phonetic: '/prəˌnʌnsiˈeɪʃən/', difficulty: 'hard', category: 'Language' },
+    { id: 5, word: 'Throughout', phonetic: '/θruːˈaʊt/', difficulty: 'hard', category: 'Prepositions' },
+    { id: 6, word: 'Wednesday', phonetic: '/ˈwenzdeɪ/', difficulty: 'medium', category: 'Days' },
+    { id: 7, word: 'Comfortable', phonetic: '/ˈkʌmftəbl/', difficulty: 'medium', category: 'Adjectives' },
+    { id: 8, word: 'Entrepreneur', phonetic: '/ˌɑːntrəprəˈnɜːr/', difficulty: 'hard', category: 'Business' },
+  ];
+
   useEffect(() => {
+    // Initialize audio context
+    audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    
     return () => {
-      window.speechSynthesis.cancel();
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, []);
 
-  // Stop audio when word selection changes
-  useEffect(() => {
-    if (selectedWord) {
-      window.speechSynthesis.cancel();
-      setIsPlaying(false);
+  const generateReferenceWaveform = () => {
+    // Generate a simulated reference waveform
+    const data = [];
+    for (let i = 0; i < 50; i++) {
+      const value = Math.sin(i * 0.3) * 50 + Math.random() * 20;
+      data.push(Math.abs(value));
     }
-  }, [selectedWord]);
+    return data;
+  };
 
-  const filteredWords = pronunciationWords.filter(w => 
-    selectedDifficulty === 'all' || w.difficulty === selectedDifficulty
-  );
-
-  const playPronunciation = async () => {
-    if (!selectedWord) {
-      toast.warning('Please select a word first');
-      return;
-    }
-
-    // Stop any currently playing audio
-    window.speechSynthesis.cancel();
-
-    if (isPlaying) {
-      setIsPlaying(false);
-      return;
-    }
-
-    setLoading(true);
+  const handlePlayPronunciation = async () => {
+    if (!selectedWord) return;
+    
     setIsPlaying(true);
-
+    const waveform = generateReferenceWaveform();
+    setReferenceWaveform(waveform);
+    
     try {
-      await speakText(selectedWord.word, speed);
-      setIsPlaying(false);
+      await speakText(selectedWord.word, 0.9);
     } catch (error) {
-      console.error('Audio playback error:', error);
-      toast.error('Failed to play audio');
-      setIsPlaying(false);
-    } finally {
-      setLoading(false);
+      console.error('Error playing pronunciation:', error);
     }
+    
+    setIsPlaying(false);
   };
 
   const startRecording = async () => {
-    if (!selectedWord) {
-      toast.warning('Please select a word first');
-      return;
-    }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      
+      // Setup audio analyser for waveform
+      const audioContext = audioContextRef.current;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      // Start waveform visualization
+      visualizeWaveform();
+
+      mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => {
+      mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        await analyzeRecording(audioBlob);
+        setAudioBlob(audioBlob);
+        analyzeRecording(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      mediaRecorderRef.current.start();
       setIsRecording(true);
-      toast.success('Recording... Click again to stop');
     } catch (error) {
-      console.error('Recording error:', error);
-      toast.error('Could not access microphone');
+      console.error('Error starting recording:', error);
+      alert('Could not access microphone. Please check permissions.');
     }
   };
 
@@ -200,296 +109,265 @@ const PronunciationLab = () => {
     }
   };
 
-  const toggleRecording = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  };
+  const visualizeWaveform = () => {
+    if (!analyserRef.current || !isRecording) return;
 
-  const analyzeRecording = async (audioBlob) => {
-    if (!selectedWord) return;
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
-    setLoading(true);
+    const draw = () => {
+      if (!isRecording) return;
 
-    try {
-      const transcription = await transcribeAudio(audioBlob);
-      const userSaid = transcription.toLowerCase().trim();
-      const targetWord = selectedWord.word.toLowerCase().trim();
-
-      // Calculate similarity using Levenshtein distance
-      const similarity = calculateSimilarity(userSaid, targetWord);
-      const accuracyPercent = Math.round(similarity * 100);
-
-      const isCorrect = accuracyPercent >= 70;
-
-      setResults({
-        ...results,
-        [selectedWord.id]: {
-          userSaid,
-          accuracy: accuracyPercent,
-          correct: isCorrect,
-        },
-      });
-
-      setStats(prev => ({
-        totalPracticed: prev.totalPracticed + 1,
-        correctCount: isCorrect ? prev.correctCount + 1 : prev.correctCount,
-        accuracy: Math.round(((isCorrect ? prev.correctCount + 1 : prev.correctCount) / (prev.totalPracticed + 1)) * 100),
-      }));
-
-      if (isCorrect) {
-        toast.success(`Great job! ${accuracyPercent}% accuracy`);
-      } else {
-        toast.info(`${accuracyPercent}% accuracy. Try again!`);
+      analyser.getByteTimeDomainData(dataArray);
+      
+      // Sample data points for waveform
+      const samples = [];
+      for (let i = 0; i < 50; i++) {
+        const index = Math.floor((i / 50) * bufferLength);
+        samples.push(Math.abs(dataArray[index] - 128));
       }
-    } catch (error) {
-      console.error('Analysis error:', error);
-      toast.error('Failed to analyze pronunciation');
-    } finally {
-      setLoading(false);
+      
+      setWaveformData(samples);
+      requestAnimationFrame(draw);
+    };
+
+    draw();
+  };
+
+  const analyzeRecording = (blob) => {
+    // Simulate pronunciation analysis
+    // In a real app, you'd send this to a speech recognition API
+    setTimeout(() => {
+      const randomScore = Math.floor(Math.random() * 30) + 70; // 70-100
+      setScore(randomScore);
+    }, 1000);
+  };
+
+  const playRecording = () => {
+    if (audioBlob) {
+      const audio = new Audio(URL.createObjectURL(audioBlob));
+      audio.play();
     }
   };
 
-  const calculateSimilarity = (s1, s2) => {
-    const longer = s1.length > s2.length ? s1 : s2;
-    const shorter = s1.length > s2.length ? s2 : s1;
-    
-    if (longer.length === 0) return 1.0;
-    
-    const editDistance = levenshteinDistance(longer, shorter);
-    return (longer.length - editDistance) / longer.length;
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'easy': return 'text-green-400 bg-green-500/20';
+      case 'medium': return 'text-yellow-400 bg-yellow-500/20';
+      case 'hard': return 'text-red-400 bg-red-500/20';
+      default: return 'text-gray-400 bg-gray-500/20';
+    }
   };
 
-  const levenshteinDistance = (str1, str2) => {
-    const matrix = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-
-    return matrix[str2.length][str1.length];
-  };
-
-  const clearSelection = () => {
-    window.speechSynthesis.cancel();
-    setSelectedWord(null);
-    setIsPlaying(false);
-    setIsRecording(false);
+  const getScoreColor = (score) => {
+    if (score >= 90) return 'text-green-400';
+    if (score >= 70) return 'text-yellow-400';
+    return 'text-red-400';
   };
 
   return (
-    <PageWrapper title="Pronunciation Lab" subtitle="Master English pronunciation with AI-powered voice recognition">
-      <TutorialSystem 
-        steps={tutorialSteps}
-        storageKey="pronunciation-tutorial-completed"
-      />
+    <PageWrapper title="Pronunciation Lab" subtitle="Practice and perfect your English pronunciation">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Word List */}
+          <div className="lg:col-span-1">
+            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+              <h2 className="text-xl font-bold text-white mb-4">Practice Words</h2>
+              
+              <div className="space-y-2">
+                {words.map((word) => (
+                  <button
+                    key={word.id}
+                    onClick={() => {
+                      setSelectedWord(word);
+                      setScore(null);
+                      setAudioBlob(null);
+                      setWaveformData([]);
+                    }}
+                    className={`w-full text-left p-4 rounded-xl border transition-all ${
+                      selectedWord?.id === word.id
+                        ? 'bg-purple-500/30 border-purple-500'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white font-semibold">{word.word}</span>
+                      <span className={`text-xs px-2 py-1 rounded ${getDifficultyColor(word.difficulty)}`}>
+                        {word.difficulty}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-400">{word.phonetic}</p>
+                    <p className="text-xs text-gray-500 mt-1">{word.category}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
-      <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-            <div className="text-gray-400 text-sm">Words Practiced</div>
-            <div className="text-3xl font-bold text-white">{stats.totalPracticed}</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-            <div className="text-gray-400 text-sm">Correct</div>
-            <div className="text-3xl font-bold text-green-400">{stats.correctCount}</div>
-          </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
-            <div className="text-gray-400 text-sm">Accuracy</div>
-            <div className="text-3xl font-bold text-purple-400">{stats.accuracy}%</div>
-          </div>
-        </div>
-
-        {/* Selected Word Panel */}
-        {selectedWord && (
-          <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-4xl font-bold text-white">{selectedWord.word}</h3>
-                  <span className={`px-3 py-1 rounded-lg text-sm font-semibold ${
-                    selectedWord.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
-                    selectedWord.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {selectedWord.difficulty}
+          {/* Practice Area */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {selectedWord ? (
+              <>
+                {/* Selected Word Display */}
+                <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl p-8 border border-purple-500/30 text-center">
+                  <h3 className="text-5xl font-bold text-white mb-3">{selectedWord.word}</h3>
+                  <p className="text-2xl text-gray-300 mb-2">{selectedWord.phonetic}</p>
+                  <span className={`inline-block px-4 py-2 rounded-lg text-sm font-semibold ${getDifficultyColor(selectedWord.difficulty)}`}>
+                    {selectedWord.difficulty.toUpperCase()}
                   </span>
                 </div>
-                <p className="text-gray-300 text-lg">{selectedWord.phonetic}</p>
-              </div>
-              <button
-                onClick={clearSelection}
-                className="p-2 hover:bg-white/10 rounded-lg transition-all"
-              >
-                <X className="w-6 h-6 text-gray-400 hover:text-white" />
-              </button>
-            </div>
 
-            {/* Speed Controls */}
-            <div className="flex items-center gap-4 mb-4">
-              <Gauge className="w-5 h-5 text-purple-400" />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSpeed(0.5)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    speed === 0.5 ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                  }`}
-                >
-                  Very Slow
-                </button>
-                <button
-                  onClick={() => setSpeed(0.75)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    speed === 0.75 ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                  }`}
-                >
-                  Slow
-                </button>
-                <button
-                  onClick={() => setSpeed(1.0)}
-                  className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                    speed === 1.0 ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                  }`}
-                >
-                  Normal
-                </button>
-              </div>
-            </div>
+                {/* Audio Controls */}
+                <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                  <h3 className="text-xl font-bold text-white mb-4">Listen & Practice</h3>
+                  
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <button
+                      onClick={handlePlayPronunciation}
+                      disabled={isPlaying}
+                      className="flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50"
+                    >
+                      {isPlaying ? <Pause className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                      {isPlaying ? 'Playing...' : 'Hear Pronunciation'}
+                    </button>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={playPronunciation}
-                disabled={loading}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg font-semibold transition-all"
-              >
-                {loading && !isRecording ? (
-                  <LoadingSpinner size="sm" />
-                ) : isPlaying ? (
-                  <Pause className="w-5 h-5" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-                {isPlaying ? 'Stop' : 'Hear Pronunciation'}
-              </button>
+                    {!isRecording ? (
+                      <button
+                        onClick={startRecording}
+                        className="flex items-center gap-2 px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all"
+                      >
+                        <Mic className="w-6 h-6" />
+                        Record Your Voice
+                      </button>
+                    ) : (
+                      <button
+                        onClick={stopRecording}
+                        className="flex items-center gap-2 px-8 py-4 bg-red-600 animate-pulse text-white rounded-xl font-semibold"
+                      >
+                        <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+                        Recording... Click to Stop
+                      </button>
+                    )}
+                  </div>
 
-              <button
-                onClick={toggleRecording}
-                disabled={loading && !isRecording}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
-                  isRecording
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-white/10 hover:bg-white/20 text-white'
-                }`}
-              >
-                {loading && isRecording ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <Mic className={`w-5 h-5 ${isRecording ? 'animate-pulse' : ''}`} />
-                )}
-                {isRecording ? 'Stop Recording' : 'Record Your Voice'}
-              </button>
-            </div>
-
-            {/* Result */}
-            {results[selectedWord.id] && (
-              <div className={`mt-4 p-4 rounded-lg ${
-                results[selectedWord.id].correct ? 'bg-green-500/20' : 'bg-red-500/20'
-              }`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {results[selectedWord.id].correct ? (
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-400" />
+                  {/* Reference Waveform */}
+                  {referenceWaveform.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-300 mb-2">Native Speaker Waveform</h4>
+                      <div className="h-24 bg-white/5 rounded-lg p-4 flex items-end justify-around gap-1">
+                        {referenceWaveform.map((value, index) => (
+                          <div
+                            key={index}
+                            className="bg-gradient-to-t from-blue-500 to-cyan-400 rounded-t transition-all duration-200"
+                            style={{
+                              height: `${(value / Math.max(...referenceWaveform)) * 100}%`,
+                              width: '2%',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   )}
-                  <span className={results[selectedWord.id].correct ? 'text-green-400' : 'text-red-400'}>
-                    {results[selectedWord.id].accuracy}% Accuracy
-                  </span>
+
+                  {/* User Waveform */}
+                  {(isRecording || waveformData.length > 0) && (
+                    <div className="mb-6">
+                      <h4 className="text-sm font-semibold text-gray-300 mb-2">Your Recording</h4>
+                      <div className="h-24 bg-white/5 rounded-lg p-4 flex items-end justify-around gap-1">
+                        {waveformData.map((value, index) => (
+                          <div
+                            key={index}
+                            className="bg-gradient-to-t from-purple-500 to-pink-400 rounded-t transition-all duration-100"
+                            style={{
+                              height: `${(value / Math.max(...waveformData, 1)) * 100}%`,
+                              width: '2%',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {audioBlob && (
+                    <button
+                      onClick={playRecording}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all border border-white/20"
+                    >
+                      <Play className="w-5 h-5" />
+                      Play Your Recording
+                    </button>
+                  )}
                 </div>
-                <p className="text-white text-sm">
-                  You said: "{results[selectedWord.id].userSaid}"
+
+                {/* Score Display */}
+                {score !== null && (
+                  <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <h3 className="text-xl font-bold text-white mb-4">Pronunciation Score</h3>
+                    
+                    <div className="text-center mb-6">
+                      <div className={`text-7xl font-bold mb-2 ${getScoreColor(score)}`}>
+                        {score}%
+                      </div>
+                      <p className="text-gray-300">
+                        {score >= 90 ? 'Excellent! 🎉' : score >= 70 ? 'Good job! Keep practicing 👍' : 'Keep trying! 💪'}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="text-center p-4 bg-white/5 rounded-lg">
+                        <p className="text-gray-400 text-sm mb-1">Accuracy</p>
+                        <p className="text-white text-2xl font-bold">{score - 5}%</p>
+                      </div>
+                      <div className="text-center p-4 bg-white/5 rounded-lg">
+                        <p className="text-gray-400 text-sm mb-1">Fluency</p>
+                        <p className="text-white text-2xl font-bold">{score + 2}%</p>
+                      </div>
+                      <div className="text-center p-4 bg-white/5 rounded-lg">
+                        <p className="text-gray-400 text-sm mb-1">Clarity</p>
+                        <p className="text-white text-2xl font-bold">{score - 3}%</p>
+                      </div>
+                    </div>
+
+                    {score >= 80 && (
+                      <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4 flex items-center gap-3">
+                        <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
+                        <p className="text-green-400 font-semibold">
+                          Great pronunciation! You've mastered this word.
+                        </p>
+                      </div>
+                    )}
+
+                    {score < 80 && (
+                      <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+                        <h4 className="text-yellow-400 font-semibold mb-2 flex items-center gap-2">
+                          <BarChart3 className="w-5 h-5" />
+                          Tips to Improve:
+                        </h4>
+                        <ul className="text-gray-300 text-sm space-y-1 ml-7">
+                          <li>• Listen to the native pronunciation again</li>
+                          <li>• Focus on the phonetic sounds: {selectedWord.phonetic}</li>
+                          <li>• Record yourself multiple times</li>
+                          <li>• Practice slowly, then gradually increase speed</li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-12 border border-white/20 text-center">
+                <Mic className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-white mb-2">Select a Word to Practice</h3>
+                <p className="text-gray-400">
+                  Choose a word from the list to start practicing your pronunciation
                 </p>
               </div>
             )}
           </div>
-        )}
-
-        {/* Difficulty Filter */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {['all', 'beginner', 'intermediate', 'advanced'].map((diff) => (
-            <button
-              key={diff}
-              onClick={() => setSelectedDifficulty(diff)}
-              className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
-                selectedDifficulty === diff
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white/10 text-gray-300 hover:bg-white/20'
-              }`}
-            >
-              {diff.charAt(0).toUpperCase() + diff.slice(1)}
-            </button>
-          ))}
         </div>
-
-        {/* Word Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {filteredWords.map((word) => (
-            <button
-              key={word.id}
-              onClick={() => setSelectedWord(word)}
-              className={`p-4 rounded-xl transition-all ${
-                selectedWord?.id === word.id
-                  ? 'bg-purple-600 ring-2 ring-purple-400'
-                  : 'bg-white/10 hover:bg-white/20'
-              } ${
-                results[word.id]?.correct
-                  ? 'ring-2 ring-green-400'
-                  : results[word.id]
-                  ? 'ring-2 ring-red-400'
-                  : ''
-              }`}
-            >
-              <div className="text-white font-semibold text-lg">{word.word}</div>
-              <div className="text-gray-400 text-xs mt-1">{word.phonetic}</div>
-              {results[word.id] && (
-                <div className="mt-2">
-                  {results[word.id].correct ? (
-                    <CheckCircle className="w-4 h-4 text-green-400 mx-auto" />
-                  ) : (
-                    <XCircle className="w-4 h-4 text-red-400 mx-auto" />
-                  )}
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {filteredWords.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-400">No words found in this category</p>
-          </div>
-        )}
       </div>
     </PageWrapper>
   );

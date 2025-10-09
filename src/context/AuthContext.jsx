@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
@@ -6,7 +7,7 @@ const AuthContext = createContext({});
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
@@ -14,22 +15,50 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
-    // Check active session
+    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for changes on auth state (sign in, sign out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // Not found error is ok
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const signUp = async (email, password, fullName) => {
     try {
@@ -37,6 +66,7 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: fullName,
           }
@@ -45,24 +75,22 @@ export const AuthProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // Create user profile
+      // Create profile after signup
       if (data.user) {
         await supabase.from('user_profiles').insert([
           {
-            id: data.user.id,
+            user_id: data.user.id,
             full_name: fullName,
-            created_at: new Date().toISOString()
+            email: email,
           }
         ]);
 
-        // Initialize user progress
-        await supabase.from('user_progress').insert([
+        // Initialize gamification stats
+        await supabase.from('user_gamification').insert([
           {
             user_id: data.user.id,
-            total_interviews: 0,
-            total_practice_time: 0,
+            total_points: 0,
             current_streak: 0,
-            longest_streak: 0
           }
         ]);
       }
@@ -79,21 +107,7 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
       });
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  };
 
-  const signInWithGoogle = async () => {
-    try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }
-      });
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
@@ -102,8 +116,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setProfile(null);
+    }
+    return { error };
+  };
+
+  const resetPassword = async (email) => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
       if (error) throw error;
       return { error: null };
     } catch (error) {
@@ -111,43 +137,90 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const resetPassword = async (email) => {
+  const updatePassword = async (newPassword) => {
     try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
+
       if (error) throw error;
-      return { data, error: null };
+      return { error: null };
     } catch (error) {
-      return { data: null, error };
+      return { error };
     }
   };
 
   const updateProfile = async (updates) => {
     try {
-      if (!user) throw new Error('No user logged in');
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_profiles')
         .update(updates)
-        .eq('id', user.id);
+        .eq('user_id', user.id);
 
       if (error) throw error;
-      return { data, error: null };
+
+      // Refresh profile
+      await fetchProfile(user.id);
+      return { error: null };
     } catch (error) {
-      return { data: null, error };
+      return { error };
+    }
+  };
+
+  const uploadProfilePicture = async (file) => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload image to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile with new avatar URL
+      await updateProfile({ avatar_url: publicUrl });
+
+      return { url: publicUrl, error: null };
+    } catch (error) {
+      return { url: null, error };
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: user.email,
+      });
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
     }
   };
 
   const value = {
     user,
+    profile,
     loading,
     signUp,
     signIn,
-    signInWithGoogle,
     signOut,
     resetPassword,
-    updateProfile
+    updatePassword,
+    updateProfile,
+    uploadProfilePicture,
+    resendVerificationEmail,
+    refreshProfile: () => fetchProfile(user?.id),
   };
 
   return (
@@ -156,3 +229,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;
