@@ -2,10 +2,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/NavBar';
+
+// Import pages with your actual file names
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Interview from './pages/Interview';
+import InterviewSimulator from './pages/InterviewSimulator';
 import PronunciationLab from './pages/PronunciationLab';
 import WritingPractice from './pages/WritingPractice';
 import GrammarHub from './pages/GrammarHub';
@@ -17,6 +19,8 @@ import PDFViewer from './pages/PDFViewer';
 import InterviewHistory from './pages/InterviewHistory';
 import Settings from './pages/Settings';
 import Leaderboard from './pages/Leaderboard';
+import Certificates from './pages/Certificates';
+import PrivateLessons from './pages/PrivateLessons';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -61,7 +65,7 @@ function App() {
         
         <Route path="/interview" element={
           <ProtectedRoute>
-            <Interview />
+            <InterviewSimulator />
           </ProtectedRoute>
         } />
         
@@ -128,6 +132,18 @@ function App() {
         <Route path="/leaderboard" element={
           <ProtectedRoute>
             <Leaderboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/certificates" element={
+          <ProtectedRoute>
+            <Certificates />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/private-lessons" element={
+          <ProtectedRoute>
+            <PrivateLessons />
           </ProtectedRoute>
         } />
         
