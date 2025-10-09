@@ -4,85 +4,73 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Mic, 
   BookOpen, 
-  TrendingUp, 
   Award, 
-  Clock, 
-  Target, 
-  LogOut,
   Briefcase,
-  Flame,
-  Calendar,
-  ChevronRight,
-  BarChart3,
   FileText,
-  Headphones,
-  Book,
-  Zap,
+  Volume2,
+  Brain,
+  History,
+  LogOut,
+  Flame,
+  Target,
+  TrendingUp,
+  Settings as SettingsIcon,
+  Library,
+  Clock
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import GamificationDashboard from '../components/GamificationDashboard';
+import ProgressTracking from '../components/ProgressTracking';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
-  const [stats, setStats] = useState({
-    totalInterviews: 0,
-    practiceTime: 0,
-    currentStreak: 0,
-    longestStreak: 0,
-  });
-  const [recentSessions, setRecentSessions] = useState([]);
+  const { user, profile } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
     if (user) {
       fetchDashboardData();
+      setGreeting(getGreeting());
     }
   }, [user]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   const fetchDashboardData = async () => {
     try {
-      // Fetch user profile
-      const { data: profileData } = await supabase
-        .from('user_profiles')
+      // Fetch gamification stats
+      const { data: gamificationData } = await supabase
+        .from('user_gamification')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
-      if (profileData) {
-        setProfile(profileData);
-      }
-
-      // Fetch user progress stats
-      const { data: progressData } = await supabase
-        .from('user_progress')
+      // Fetch recent activity
+      const { data: activityData } = await supabase
+        .from('activity_log')
         .select('*')
         .eq('user_id', user.id)
-        .single();
-
-      if (progressData) {
-        setStats({
-          totalInterviews: progressData.total_interviews || 0,
-          practiceTime: progressData.total_practice_time || 0,
-          currentStreak: progressData.current_streak || 0,
-          longestStreak: progressData.longest_streak || 0,
-        });
-      }
-
-      // Fetch recent interview sessions
-      const { data: sessionsData } = await supabase
-        .from('interview_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('started_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(5);
 
-      if (sessionsData) {
-        setRecentSessions(sessionsData);
-      }
+      setStats(gamificationData || {
+        total_points: 0,
+        lessons_completed: 0,
+        vocabulary_learned: 0,
+        current_streak: 0,
+        essays_submitted: 0,
+        perfect_pronunciations: 0,
+      });
+
+      setRecentActivity(activityData || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -90,286 +78,318 @@ const Dashboard = () => {
     }
   };
 
-  const formatTime = (minutes) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
   };
 
   const quickActions = [
     {
-      icon: Briefcase,
       title: 'Interview Practice',
-      description: 'Simulate real interviews',
-      path: '/interview',
-      color: 'from-blue-500 to-cyan-500',
-    },
-    {
-      icon: Mic,
-      title: 'Pronunciation Lab',
-      description: 'Perfect your accent',
-      path: '/pronunciation',
+      description: 'Practice common interview questions',
+      icon: Briefcase,
       color: 'from-purple-500 to-pink-500',
+      path: '/interview',
+      stats: `${stats?.lessons_completed || 0} completed`,
     },
     {
-      icon: FileText,
+      title: 'Pronunciation Lab',
+      description: 'Perfect your pronunciation',
+      icon: Mic,
+      color: 'from-blue-500 to-cyan-500',
+      path: '/pronunciation',
+      stats: `${stats?.perfect_pronunciations || 0} perfect`,
+    },
+    {
       title: 'Writing Practice',
-      description: 'Improve your essays',
-      path: '/writing',
+      description: 'Improve your writing skills',
+      icon: FileText,
       color: 'from-green-500 to-emerald-500',
+      path: '/writing',
+      stats: `${stats?.essays_submitted || 0} essays`,
     },
     {
-      icon: BookOpen,
       title: 'Grammar Hub',
-      description: 'Master grammar rules',
-      path: '/grammar',
+      description: 'Master English grammar',
+      icon: Brain,
       color: 'from-orange-500 to-red-500',
+      path: '/grammar',
+      stats: 'Learn & practice',
     },
     {
-      icon: Headphones,
-      title: 'Reading & Listening',
-      description: 'Comprehension exercises',
-      path: '/reading',
+      title: 'Reading',
+      description: 'Enhance reading comprehension',
+      icon: BookOpen,
       color: 'from-indigo-500 to-purple-500',
+      path: '/reading',
+      stats: 'Build fluency',
     },
     {
-      icon: Target,
-      title: 'Vocabulary Builder',
-      description: 'Expand your word bank',
-      path: '/vocabulary',
+      title: 'Vocabulary',
+      description: 'Expand your vocabulary',
+      icon: Volume2,
       color: 'from-pink-500 to-rose-500',
+      path: '/vocabulary',
+      stats: `${stats?.vocabulary_learned || 0} words`,
     },
     {
-      icon: Book,
       title: 'Library',
-      description: 'Books & lessons',
+      description: 'Access lessons and books',
+      icon: Library,
+      color: 'from-teal-500 to-green-500',
       path: '/library',
-      color: 'from-teal-500 to-cyan-500',
+      stats: 'Books & lessons',
     },
     {
-      icon: BarChart3,
-      title: 'Interview History',
-      description: 'Review past sessions',
+      title: 'History',
+      description: 'View your learning history',
+      icon: History,
+      color: 'from-gray-500 to-slate-500',
       path: '/history',
-      color: 'from-yellow-500 to-orange-500',
+      stats: 'Track progress',
     },
   ];
+
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'lesson_complete': return BookOpen;
+      case 'vocabulary_learned': return Volume2;
+      case 'pronunciation_practice': return Mic;
+      case 'writing_submitted': return FileText;
+      default: return Target;
+    }
+  };
+
+  const getActivityColor = (type) => {
+    switch (type) {
+      case 'lesson_complete': return 'text-blue-400';
+      case 'vocabulary_learned': return 'text-green-400';
+      case 'pronunciation_practice': return 'text-purple-400';
+      case 'writing_submitted': return 'text-orange-400';
+      default: return 'text-gray-400';
+    }
+  };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <LoadingSpinner size="xl" />
+        <div className="text-white text-2xl">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Welcome Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
-              Welcome back, {profile?.full_name || user?.email?.split('@')[0] || 'Student'}! 👋
+            <h1 className="text-4xl font-bold text-white mb-2">
+              {greeting}, {profile?.full_name || 'Student'}! 👋
             </h1>
             <p className="text-gray-300">Ready to continue your English learning journey?</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-orange-500/20 px-4 py-2 rounded-lg border border-orange-500/30">
-              <Flame className="w-5 h-5 text-orange-400" />
-              <div>
-                <div className="text-xs text-gray-400">Current Streak</div>
-                <div className="text-lg font-bold text-white">{stats.currentStreak} days</div>
-              </div>
-            </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all border border-white/20"
+            >
+              <SettingsIcon className="w-5 h-5" />
+              Settings
+            </button>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-all border border-red-500/30"
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <Briefcase className="w-6 h-6 text-blue-400" />
-              </div>
-              <div>
-                <div className="text-gray-400 text-sm">Interviews</div>
-                <div className="text-2xl font-bold text-white">{stats.totalInterviews}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <Clock className="w-6 h-6 text-green-400" />
-              </div>
-              <div>
-                <div className="text-gray-400 text-sm">Practice Time</div>
-                <div className="text-2xl font-bold text-white">{formatTime(stats.practiceTime)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                <Flame className="w-6 h-6 text-orange-400" />
-              </div>
-              <div>
-                <div className="text-gray-400 text-sm">Current Streak</div>
-                <div className="text-2xl font-bold text-white">{stats.currentStreak}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+        {/* Key Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-purple-500/30 rounded-lg flex items-center justify-center">
                 <Award className="w-6 h-6 text-purple-400" />
               </div>
-              <div>
-                <div className="text-gray-400 text-sm">Longest Streak</div>
-                <div className="text-2xl font-bold text-white">{stats.longestStreak}</div>
+              <span className="text-3xl font-bold text-white">{stats.total_points}</span>
+            </div>
+            <p className="text-gray-300 font-medium">Total Points</p>
+            <p className="text-sm text-gray-400 mt-1">Keep learning to earn more!</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/30">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-500/30 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-blue-400" />
               </div>
+              <span className="text-3xl font-bold text-white">{stats.lessons_completed}</span>
+            </div>
+            <p className="text-gray-300 font-medium">Lessons Completed</p>
+            <p className="text-sm text-gray-400 mt-1">Great progress!</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-lg rounded-2xl p-6 border border-orange-500/30">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-orange-500/30 rounded-lg flex items-center justify-center">
+                <Flame className="w-6 h-6 text-orange-400" />
+              </div>
+              <span className="text-3xl font-bold text-white">{stats.current_streak}</span>
+            </div>
+            <p className="text-gray-300 font-medium">Day Streak</p>
+            <p className="text-sm text-gray-400 mt-1">Don't break the chain! 🔥</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-lg rounded-2xl p-6 border border-green-500/30">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-green-500/30 rounded-lg flex items-center justify-center">
+                <Volume2 className="w-6 h-6 text-green-400" />
+              </div>
+              <span className="text-3xl font-bold text-white">{stats.vocabulary_learned}</span>
+            </div>
+            <p className="text-gray-300 font-medium">Words Learned</p>
+            <p className="text-sm text-gray-400 mt-1">Expand your vocabulary!</p>
+          </div>
+        </div>
+
+        {/* Motivational Banner */}
+        <div className="bg-gradient-to-r from-purple-600/30 to-pink-600/30 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white mb-1">
+                {stats.current_streak >= 7 ? '🔥 You\'re on fire!' : '🎯 Keep up the momentum!'}
+              </h3>
+              <p className="text-gray-300">
+                {stats.current_streak >= 7 
+                  ? `Amazing! You've studied for ${stats.current_streak} days straight. Keep going!`
+                  : 'Study a little every day to build consistency and see faster progress.'}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Gamification Dashboard */}
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <Zap className="w-6 h-6 text-yellow-400" />
-            Your Progress
-          </h2>
-          <GamificationDashboard />
+        {/* Progress Tracking Component */}
+        <div className="mb-8">
+          <ProgressTracking />
         </div>
 
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-4">Quick Actions</h2>
+        {/* Quick Actions Grid */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4">Learning Activities</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action, index) => (
-              <button
-                key={index}
-                onClick={() => navigate(action.path)}
-                className="group bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-purple-500 transition-all text-left"
-              >
-                <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <action.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-white font-semibold text-lg mb-1 group-hover:text-purple-400 transition-colors">
-                  {action.title}
-                </h3>
-                <p className="text-gray-400 text-sm">{action.description}</p>
-              </button>
-            ))}
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={index}
+                  onClick={() => navigate(action.path)}
+                  className="group bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all hover:scale-105 text-left"
+                >
+                  <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-1">{action.title}</h3>
+                  <p className="text-sm text-gray-400 mb-2">{action.description}</p>
+                  <p className="text-xs text-purple-400 font-semibold">{action.stats}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Sessions */}
           <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-purple-400" />
-                Recent Sessions
-              </h3>
-              <button
-                onClick={() => navigate('/history')}
-                className="text-purple-400 hover:text-purple-300 text-sm flex items-center gap-1"
-              >
-                View All
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {recentSessions.length > 0 ? (
-                recentSessions.map((session, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-all cursor-pointer"
-                    onClick={() => navigate('/history')}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-white font-medium">
-                        Interview Session
+            <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
+            
+            {recentActivity.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivity.map((activity, index) => {
+                  const Icon = getActivityIcon(activity.activity_type);
+                  const colorClass = getActivityColor(activity.activity_type);
+                  
+                  return (
+                    <div key={index} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                      <div className={`w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                        <Icon className={`w-5 h-5 ${colorClass}`} />
                       </div>
-                      <div className={`px-2 py-1 rounded text-xs ${
-                        session.status === 'completed'
-                          ? 'bg-green-500/20 text-green-400'
-                          : 'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {session.status}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">
+                          {activity.activity_name || activity.activity_type.replace('_', ' ')}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          {activity.points} points • {new Date(activity.created_at).toLocaleDateString()}
+                        </p>
                       </div>
+                      {activity.duration_minutes > 0 && (
+                        <div className="flex items-center gap-1 text-gray-400 text-sm">
+                          <Clock className="w-4 h-4" />
+                          {activity.duration_minutes}m
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-400">
-                      <span>{formatDate(session.started_at)}</span>
-                      <span>•</span>
-                      <span>{session.questions_answered || 0} / {session.total_questions || 0} questions</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-400 text-sm">No recent activity</p>
-                  <p className="text-gray-500 text-xs mt-1">Start an interview to see your progress here</p>
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Target className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-400">No activity yet. Start learning to see your progress here!</p>
+              </div>
+            )}
           </div>
 
-          {/* Weekly Progress Chart */}
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-purple-400" />
-                Weekly Progress
-              </h3>
-            </div>
-            <div className="h-48 flex items-end justify-between gap-2">
-              {[20, 45, 30, 60, 35, 70, 50].map((height, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                  <div 
-                    className="w-full bg-gradient-to-t from-purple-500 to-pink-500 rounded-t-lg transition-all hover:opacity-80 cursor-pointer group relative"
-                    style={{ height: `${height}%` }}
-                  >
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 px-2 py-1 rounded text-xs text-white whitespace-nowrap">
-                      {height} min
-                    </div>
-                  </div>
-                  <span className="text-xs text-gray-400">
-                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
-                  </span>
+          {/* Study Tips */}
+          <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/30">
+            <h3 className="text-xl font-bold text-white mb-4">💡 Study Tips</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-blue-400 font-bold">1</span>
                 </div>
-              ))}
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Study Daily</h4>
+                  <p className="text-gray-300 text-sm">Even 15 minutes a day builds momentum and creates lasting habits.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-purple-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-purple-400 font-bold">2</span>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Mix It Up</h4>
+                  <p className="text-gray-300 text-sm">Practice different skills (reading, writing, speaking) for balanced improvement.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-green-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-400 font-bold">3</span>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Review Regularly</h4>
+                  <p className="text-gray-300 text-sm">Revisit vocabulary and concepts to move them into long-term memory.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-orange-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-orange-400 font-bold">4</span>
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold mb-1">Track Progress</h4>
+                  <p className="text-gray-300 text-sm">Watch your stats grow and celebrate small wins along the way!</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Motivational Banner */}
-        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-center">
-          <h3 className="text-2xl font-bold text-white mb-2">
-            Keep up the great work! 🎉
-          </h3>
-          <p className="text-purple-100 mb-6">
-            You're making excellent progress. Practice daily to maintain your streak!
-          </p>
-          <button
-            onClick={() => navigate('/interview')}
-            className="bg-white text-purple-600 font-semibold px-8 py-3 rounded-xl hover:bg-gray-100 transition-all inline-flex items-center gap-2"
-          >
-            Start Practice Session
-            <ChevronRight className="w-5 h-5" />
-          </button>
         </div>
       </div>
     </div>

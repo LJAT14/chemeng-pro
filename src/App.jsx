@@ -1,57 +1,140 @@
 // src/App.jsx
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import Navbar from './components/Navbar';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import InterviewSimulator from './pages/InterviewSimulator';
-import InterviewHistory from './pages/InterviewHistory';
+import Interview from './pages/Interview';
 import PronunciationLab from './pages/PronunciationLab';
 import WritingPractice from './pages/WritingPractice';
 import GrammarHub from './pages/GrammarHub';
-import VocabularyBuilder from './pages/VocabularyBuilder';
 import ReadingComprehension from './pages/ReadingComprehension';
+import VocabularyBuilder from './pages/VocabularyBuilder';
 import Library from './pages/Library';
 import LessonPlayer from './pages/LessonPlayer';
-import LandingPage from './pages/LandingPage';
-import Navbar from './components/NavBar';
-import ErrorBoundary from './components/ErrorBoundary';
-import { ToastProvider } from './components/Toast';
-import { AuthProvider } from './context/AuthContext';
+import PDFViewer from './pages/PDFViewer';
+import InterviewHistory from './pages/InterviewHistory';
+import Settings from './pages/Settings';
+import Leaderboard from './pages/Leaderboard';
+
+// Protected Route Component
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-2xl">Loading...</div>
+      </div>
+    );
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return (
+    <>
+      <Navbar />
+      {children}
+    </>
+  );
+};
 
 function App() {
+  const { user } = useAuth();
+
   return (
-    <ErrorBoundary>
-      <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
-            <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
-              <Routes>
-                {/* Routes WITHOUT Navbar */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<Login />} />
-                
-                {/* Routes WITH Navbar */}
-                <Route path="/*" element={
-                  <>
-                    <Navbar />
-                    <Routes>
-                      <Route path="/interview" element={<InterviewSimulator />} />
-                      <Route path="/interview-history" element={<InterviewHistory />} />
-                      <Route path="/pronunciation" element={<PronunciationLab />} />
-                      <Route path="/writing" element={<WritingPractice />} />
-                      <Route path="/grammar" element={<GrammarHub />} />
-                      <Route path="/vocabulary" element={<VocabularyBuilder />} />
-                      <Route path="/reading" element={<ReadingComprehension />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                    </Routes>
-                  </>
-                } />
-              </Routes>
-            </div>
-          </ToastProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </ErrorBoundary>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <LandingPage />} />
+        <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+        
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/interview" element={
+          <ProtectedRoute>
+            <Interview />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/pronunciation" element={
+          <ProtectedRoute>
+            <PronunciationLab />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/writing" element={
+          <ProtectedRoute>
+            <WritingPractice />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/grammar" element={
+          <ProtectedRoute>
+            <GrammarHub />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/reading" element={
+          <ProtectedRoute>
+            <ReadingComprehension />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/vocabulary" element={
+          <ProtectedRoute>
+            <VocabularyBuilder />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/library" element={
+          <ProtectedRoute>
+            <Library />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/lesson/:lessonId" element={
+          <ProtectedRoute>
+            <LessonPlayer />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/book/:bookId" element={
+          <ProtectedRoute>
+            <PDFViewer />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/history" element={
+          <ProtectedRoute>
+            <InterviewHistory />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/leaderboard" element={
+          <ProtectedRoute>
+            <Leaderboard />
+          </ProtectedRoute>
+        } />
+        
+        {/* Catch all - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }
 
