@@ -1,254 +1,197 @@
-// src/pages/Library.jsx
-import React, { useState } from 'react';
-import { BookOpen, Play, Clock, BarChart, Search, FileText } from 'lucide-react';
+ 
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BookOpen, Search, Filter, Loader, ExternalLink } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
+import { CURATED_BOOKS, searchAllBooks } from '../services/booksAPI';
 
-// Books data - your uploaded PDFs
-// ADD MORE BOOKS HERE AS YOU UPLOAD THEM
-const books = [
-  {
-    id: 'intermediate-english',
-    type: 'book',
-    level: 'B1',
-    title: 'Intermediate English',
-    duration: 'PDF Book',
-    difficulty: 'Intermediate',
-    description: 'Complete intermediate level English course with comprehensive lessons',
-    topics: ['Grammar', 'Vocabulary', 'Reading', 'Writing'],
-  },
-  // ADD YOUR NEW BOOKS HERE:
-  // {
-  //   id: 'basic-english',
-  //   type: 'book',
-  //   level: 'A1',
-  //   title: 'Basic English Course',
-  //   duration: 'PDF Book',
-  //   difficulty: 'Beginner',
-  //   description: 'Start your English journey',
-  //   topics: ['Alphabet', 'Numbers', 'Greetings'],
-  // },
-];
-
-// Interactive audio lessons
-const lessons = [
-  {
-    id: 'a1-greetings',
-    level: 'A1',
-    title: 'Basic Greetings and Introductions',
-    duration: '15 min',
-    difficulty: 'Beginner',
-    description: 'Learn essential phrases for meeting people',
-    topics: ['Hello', 'Goodbye', 'My name is', 'Nice to meet you'],
-  },
-  {
-    id: 'a1-numbers',
-    level: 'A1',
-    title: 'Numbers and Counting',
-    duration: '20 min',
-    difficulty: 'Beginner',
-    description: 'Master numbers from 1-100',
-    topics: ['Cardinal numbers', 'Ordinal numbers', 'Prices', 'Phone numbers'],
-  },
-  {
-    id: 'a2-daily-routine',
-    level: 'A2',
-    title: 'Talking About Daily Routines',
-    duration: '25 min',
-    difficulty: 'Elementary',
-    description: 'Describe your typical day in English',
-    topics: ['Time expressions', 'Daily activities', 'Present simple', 'Frequency adverbs'],
-  },
-  {
-    id: 'a2-shopping',
-    level: 'A2',
-    title: 'Shopping and Prices',
-    duration: '20 min',
-    difficulty: 'Elementary',
-    description: 'Learn to shop and negotiate in English',
-    topics: ['Asking for prices', 'Sizes and colors', 'Can I have...', 'How much is...'],
-  },
-  {
-    id: 'b1-past-stories',
-    level: 'B1',
-    title: 'Telling Stories in the Past',
-    duration: '30 min',
-    difficulty: 'Intermediate',
-    description: 'Master past tenses and narrative skills',
-    topics: ['Past simple', 'Past continuous', 'Time connectors', 'Story structure'],
-  },
-  {
-    id: 'b1-opinions',
-    level: 'B1',
-    title: 'Expressing Opinions and Agreeing',
-    duration: '25 min',
-    difficulty: 'Intermediate',
-    description: 'Learn to share your views effectively',
-    topics: ['I think that...', 'In my opinion', 'Agreeing/disagreeing', 'Giving reasons'],
-  },
-  {
-    id: 'b2-debates',
-    level: 'B2',
-    title: 'Debate and Argumentation',
-    duration: '35 min',
-    difficulty: 'Upper-Intermediate',
-    description: 'Develop advanced discussion skills',
-    topics: ['Formal expressions', 'Counter-arguments', 'Evidence', 'Persuasion'],
-  },
-  {
-    id: 'b2-business',
-    level: 'B2',
-    title: 'Business English Essentials',
-    duration: '40 min',
-    difficulty: 'Upper-Intermediate',
-    description: 'Professional English for the workplace',
-    topics: ['Emails', 'Meetings', 'Presentations', 'Negotiations'],
-  },
-];
-
-const Library = () => {
+export default function Library() {
   const navigate = useNavigate();
-  const [selectedLevel, setSelectedLevel] = useState('all');
+  const [books, setBooks] = useState(CURATED_BOOKS);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [loading, setLoading] = useState(false);
 
-  const levels = ['all', 'A1', 'A2', 'B1', 'B2'];
+  const categories = ['All', 'Grammar', 'Vocabulary', 'Business', 'Pronunciation', 'Literature', 'ESL'];
 
-  // Combine books and lessons
-  const allContent = [...books, ...lessons];
+  // Load more books from APIs
+  const loadMoreBooks = async () => {
+    setLoading(true);
+    try {
+      const query = searchQuery || 'english learning';
+      const apiBooks = await searchAllBooks(query);
+      setBooks(apiBooks);
+    } catch (error) {
+      console.error('Error loading books:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredContent = allContent.filter(item => {
-    const matchesLevel = selectedLevel === 'all' || item.level === selectedLevel;
-    const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesLevel && matchesSearch;
+  useEffect(() => {
+    if (searchQuery.length > 2) {
+      const timer = setTimeout(() => {
+        loadMoreBooks();
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      // Load default Open Library books on mount
+      const loadDefaultBooks = async () => {
+        setLoading(true);
+        const defaultBooks = await searchAllBooks('english learning');
+        setBooks(defaultBooks);
+        setLoading(false);
+      };
+      loadDefaultBooks();
+    }
+  }, [searchQuery]);
+
+  const filteredBooks = books.filter(book => {
+    const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         book.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'All' || book.category === selectedCategory;
+    return matchesSearch && matchesCategory;
   });
 
-  const getLevelColor = (level) => {
-    const colors = {
-      'A1': 'bg-green-500/20 text-green-400 border-green-500/30',
-      'A2': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      'B1': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      'B2': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-      'C1': 'bg-red-500/20 text-red-400 border-red-500/30',
-    };
-    return colors[level] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  const getDifficultyColor = (difficulty) => {
+    switch (difficulty) {
+      case 'Beginner':
+        return 'bg-green-500/20 text-green-400';
+      case 'Intermediate':
+        return 'bg-yellow-500/20 text-yellow-400';
+      case 'Advanced':
+        return 'bg-red-500/20 text-red-400';
+      case 'Upper-Intermediate':
+        return 'bg-orange-500/20 text-orange-400';
+      default:
+        return 'bg-blue-500/20 text-blue-400';
+    }
   };
 
   return (
-    <PageWrapper title="English Lessons Library" subtitle="Interactive lessons and books from beginner to advanced">
-      <div className="space-y-6">
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search lessons and books..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {levels.map((level) => (
-              <button
-                key={level}
-                onClick={() => setSelectedLevel(level)}
-                className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
-                  selectedLevel === level
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
-                }`}
-              >
-                {level === 'all' ? 'All Levels' : level}
-              </button>
-            ))}
-          </div>
+    <PageWrapper 
+      title="English Learning Library" 
+      subtitle="Free books, grammar guides, and learning resources"
+    >
+      {/* Search and Filter */}
+      <div className="mb-8 space-y-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search for books, topics, or authors..."
+            className="w-full pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          {loading && (
+            <Loader className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400 animate-spin" />
+          )}
         </div>
 
-        {/* Results count */}
-        <div className="text-gray-400 text-sm">
-          {filteredContent.length} {filteredContent.length === 1 ? 'item' : 'items'} found
-          {books.length > 0 && ` (${books.length} ${books.length === 1 ? 'book' : 'books'}, ${lessons.length} ${lessons.length === 1 ? 'lesson' : 'lessons'})`}
+        {/* Category Filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Filter className="w-5 h-5 text-slate-400" />
+          {categories.map(category => (
+            <button
+              key={category}
+              onClick={() => setSelectedCategory(category)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                selectedCategory === category
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-slate-300 hover:bg-white/20'
+              }`}
+            >
+              {category}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Content Grid */}
+      {/* Info Banner */}
+      <div className="mb-6 bg-blue-500/20 border border-blue-500/30 rounded-xl p-4">
+        <p className="text-blue-200 text-sm">
+          📚 All books are free and sourced from Project Gutenberg, Internet Archive, and Open Library.
+          Click on any book to read online or download.
+        </p>
+      </div>
+
+      {/* Books Grid */}
+      {filteredBooks.length === 0 ? (
+        <div className="text-center py-16">
+          <BookOpen className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-400 text-lg">No books found</p>
+          <p className="text-slate-500 text-sm mt-2">Try a different search term or category</p>
+        </div>
+      ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredContent.map((item) => (
+          {filteredBooks.map((book) => (
             <div
-              key={item.id}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-purple-500 transition-all cursor-pointer group"
-              onClick={() => navigate(item.type === 'book' ? `/book/${item.id}` : `/lesson/${item.id}`)}
+              key={book.id}
+              className="group bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`px-3 py-1 rounded-lg border ${getLevelColor(item.level)}`}>
-                  <span className="font-bold">{item.level}</span>
-                </div>
                 <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center group-hover:bg-purple-500/30 transition-all">
-                  {item.type === 'book' ? (
-                    <FileText className="w-6 h-6 text-purple-400" />
-                  ) : (
-                    <Play className="w-6 h-6 text-purple-400" />
-                  )}
+                  <BookOpen className="w-6 h-6 text-purple-400" />
                 </div>
+                <span className={`text-xs px-3 py-1 rounded-full ${getDifficultyColor(book.difficulty)}`}>
+                  {book.difficulty}
+                </span>
               </div>
 
               <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">
-                {item.title}
+                {book.title}
               </h3>
 
-              <p className="text-gray-300 text-sm mb-4 line-clamp-2">
-                {item.description}
+              <p className="text-slate-300 text-sm mb-4 line-clamp-2">
+                {book.description}
               </p>
 
-              <div className="flex items-center gap-4 text-sm text-gray-400 mb-4">
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
-                  {item.duration}
-                </div>
-                <div className="flex items-center gap-1">
-                  <BarChart className="w-4 h-4" />
-                  {item.difficulty}
-                </div>
+              <div className="flex items-center justify-between text-sm text-slate-400 mb-4">
+                <span>{book.category}</span>
+                {book.pages && <span>{book.pages} pages</span>}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {item.topics.slice(0, 3).map((topic, idx) => (
-                  <span
-                    key={idx}
-                    className="text-xs px-2 py-1 bg-white/5 rounded-md text-gray-400"
-                  >
-                    {topic}
-                  </span>
-                ))}
-                {item.topics.length > 3 && (
-                  <span className="text-xs px-2 py-1 bg-white/5 rounded-md text-gray-400">
-                    +{item.topics.length - 3} more
-                  </span>
-                )}
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-4">
+                <span>Source: {book.source}</span>
               </div>
 
-              {/* Type badge */}
-              {item.type === 'book' && (
-                <div className="mt-4 pt-4 border-t border-white/10">
-                  <span className="text-xs text-purple-400 font-semibold">PDF BOOK</span>
-                </div>
-              )}
+              <div className="flex gap-2">
+                {/* View in App Button */}
+                <button
+                  onClick={() => navigate(`/library/${book.id}`)}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Read Now
+                </button>
+
+                {/* Open Direct Link Button */}
+                <button
+                  onClick={() => window.open(book.fileUrl, '_blank')}
+                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
+      )}
 
-        {filteredContent.length === 0 && (
-          <div className="text-center py-12">
-            <BookOpen className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 text-lg">No content found</p>
-            <p className="text-gray-500 text-sm mt-2">Try adjusting your search or filter</p>
-          </div>
-        )}
-      </div>
+      {/* Load More Button */}
+      {!loading && searchQuery.length <= 2 && (
+        <div className="text-center mt-8">
+          <button
+            onClick={loadMoreBooks}
+            className="px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-all border border-white/20"
+          >
+            Load More Books from Online Libraries
+          </button>
+        </div>
+      )}
     </PageWrapper>
   );
-};
-
-export default Library;
+}

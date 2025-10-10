@@ -1,399 +1,303 @@
-// src/pages/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Mic, 
-  BookOpen, 
-  Award, 
-  Briefcase,
-  FileText,
-  Volume2,
-  Brain,
-  History,
-  LogOut,
-  Flame,
-  Target,
-  TrendingUp,
-  Settings as SettingsIcon,
-  Library,
-  Clock
-} from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import { useAuth } from '../context/AuthContext';
-import ProgressTracking from '../components/ProgressTracking';
+import {
+  Mic,
+  BookOpen,
+  PenTool,
+  Headphones,
+  Trophy,
+  TrendingUp,
+  Target,
+  Flame,
+  Award,
+  Calendar,
+  CheckCircle2,
+  Loader
+} from 'lucide-react';
+import PageWrapper from '../components/PageWrapper';
 
-const Dashboard = () => {
+export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-  const [stats, setStats] = useState(null);
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [user, setUser] = useState(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [stats, setStats] = useState({
+    lessonsCompleted: 0,
+    currentStreak: 0,
+    totalPoints: 0,
+    rank: '--',
+    weeklyActivity: 0,
+  });
   const [loading, setLoading] = useState(true);
-  const [greeting, setGreeting] = useState('');
 
   useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-      setGreeting(getGreeting());
-    }
-  }, [user]);
+    const loadUserData = async () => {
+      try {
+        // Check for guest mode
+        const guestMode = localStorage.getItem('guestMode') === 'true';
+        
+        if (guestMode) {
+          const guestUser = JSON.parse(localStorage.getItem('guestUser') || '{}');
+          setUser(guestUser);
+          setIsGuest(true);
+          
+          // Load guest stats from localStorage
+          const guestStats = JSON.parse(localStorage.getItem('guestStats') || '{}');
+          setStats({
+            lessonsCompleted: guestStats.lessonsCompleted || 0,
+            currentStreak: guestStats.currentStreak || 0,
+            totalPoints: guestStats.totalPoints || 0,
+            rank: guestStats.rank || 'Guest',
+            weeklyActivity: guestStats.weeklyActivity || 0,
+          });
+          setLoading(false);
+          return;
+        }
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
-    return 'Good evening';
-  };
+        // Load real user data from Supabase
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        if (authUser) {
+          setUser(authUser);
+          
+          // Fetch user progress with timeout
+          const progressPromise = supabase
+            .from('user_progress')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .single();
 
-  const fetchDashboardData = async () => {
-    try {
-      // Fetch gamification stats
-      const { data: gamificationData } = await supabase
-        .from('user_gamification')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+          const gamificationPromise = supabase
+            .from('user_gamification')
+            .select('*')
+            .eq('user_id', authUser.id)
+            .single();
 
-      // Fetch recent activity
-      const { data: activityData } = await supabase
-        .from('activity_log')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
+          // Set 2 second timeout for data fetching
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 2000)
+          );
 
-      setStats(gamificationData || {
-        total_points: 0,
-        lessons_completed: 0,
-        vocabulary_learned: 0,
-        current_streak: 0,
-        essays_submitted: 0,
-        perfect_pronunciations: 0,
-      });
+          try {
+            const [progressResult, gamificationResult] = await Promise.race([
+              Promise.all([progressPromise, gamificationPromise]),
+              timeoutPromise
+            ]);
 
-      setRecentActivity(activityData || []);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+            if (progressResult) {
+              const { data: progressData } = progressResult;
+              const { data: gamificationData } = gamificationResult;
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
-  };
+              setStats({
+                lessonsCompleted: progressData?.lessons_completed || 0,
+                currentStreak: gamificationData?.current_streak || 0,
+                totalPoints: gamificationData?.total_points || 0,
+                rank: gamificationData?.rank || '--',
+                weeklyActivity: progressData?.weekly_activity || 0,
+              });
+            }
+          } catch (error) {
+            console.log('Using default stats due to timeout or error');
+            // Continue with default stats
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const quickActions = [
+    loadUserData();
+  }, []);
+
+  const activities = [
     {
-      title: 'Interview Practice',
-      description: 'Practice common interview questions',
-      icon: Briefcase,
-      color: 'from-purple-500 to-pink-500',
-      path: '/interview',
-      stats: `${stats?.lessons_completed || 0} completed`,
-    },
-    {
-      title: 'Pronunciation Lab',
-      description: 'Perfect your pronunciation',
       icon: Mic,
+      title: 'Interview Simulator',
+      description: 'Practice technical interviews with AI feedback',
+      path: '/interview',
       color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-500/10',
+    },
+    {
+      icon: Headphones,
+      title: 'Pronunciation Lab',
+      description: 'Perfect your English pronunciation',
       path: '/pronunciation',
-      stats: `${stats?.perfect_pronunciations || 0} perfect`,
+      color: 'from-purple-500 to-pink-500',
+      bgColor: 'bg-purple-500/10',
     },
     {
-      title: 'Writing Practice',
-      description: 'Improve your writing skills',
-      icon: FileText,
-      color: 'from-green-500 to-emerald-500',
-      path: '/writing',
-      stats: `${stats?.essays_submitted || 0} essays`,
-    },
-    {
-      title: 'Grammar Hub',
-      description: 'Master English grammar',
-      icon: Brain,
-      color: 'from-orange-500 to-red-500',
-      path: '/grammar',
-      stats: 'Learn & practice',
-    },
-    {
-      title: 'Reading',
-      description: 'Enhance reading comprehension',
       icon: BookOpen,
-      color: 'from-indigo-500 to-purple-500',
-      path: '/reading',
-      stats: 'Build fluency',
-    },
-    {
-      title: 'Vocabulary',
-      description: 'Expand your vocabulary',
-      icon: Volume2,
-      color: 'from-pink-500 to-rose-500',
+      title: 'Vocabulary Builder',
+      description: 'Expand your technical vocabulary',
       path: '/vocabulary',
-      stats: `${stats?.vocabulary_learned || 0} words`,
+      color: 'from-green-500 to-emerald-500',
+      bgColor: 'bg-green-500/10',
     },
     {
+      icon: PenTool,
+      title: 'Reading Comprehension',
+      description: 'Improve reading skills with technical articles',
+      path: '/reading',
+      color: 'from-orange-500 to-red-500',
+      bgColor: 'bg-orange-500/10',
+    },
+    {
+      icon: PenTool,
+      title: 'Writing Practice',
+      description: 'Enhance your technical writing skills',
+      path: '/writing',
+      color: 'from-yellow-500 to-orange-500',
+      bgColor: 'bg-yellow-500/10',
+    },
+    {
+      icon: BookOpen,
       title: 'Library',
-      description: 'Access lessons and books',
-      icon: Library,
-      color: 'from-teal-500 to-green-500',
+      description: 'Access English lessons and books',
       path: '/library',
-      stats: 'Books & lessons',
-    },
-    {
-      title: 'History',
-      description: 'View your learning history',
-      icon: History,
-      color: 'from-gray-500 to-slate-500',
-      path: '/history',
-      stats: 'Track progress',
+      color: 'from-indigo-500 to-purple-500',
+      bgColor: 'bg-indigo-500/10',
     },
   ];
 
-  const getActivityIcon = (type) => {
-    switch (type) {
-      case 'lesson_complete': return BookOpen;
-      case 'vocabulary_learned': return Volume2;
-      case 'pronunciation_practice': return Mic;
-      case 'writing_submitted': return FileText;
-      default: return Target;
-    }
-  };
-
-  const getActivityColor = (type) => {
-    switch (type) {
-      case 'lesson_complete': return 'text-blue-400';
-      case 'vocabulary_learned': return 'text-green-400';
-      case 'pronunciation_practice': return 'text-purple-400';
-      case 'writing_submitted': return 'text-orange-400';
-      default: return 'text-gray-400';
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader className="w-8 h-8 text-purple-400 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">
-              {greeting}, {profile?.full_name || 'Student'}! 👋
-            </h1>
-            <p className="text-gray-300">Ready to continue your English learning journey?</p>
+    <PageWrapper
+      title={`Welcome back, ${user?.full_name?.split(' ')[0] || 'Guest'}! 👋`}
+      subtitle="Continue your English learning journey"
+    >
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+          <div className="flex items-center justify-between mb-2">
+            <CheckCircle2 className="w-8 h-8 text-green-400" />
+            <span className="text-2xl font-bold text-white">{stats.lessonsCompleted}</span>
           </div>
-          <div className="flex gap-3">
+          <p className="text-slate-300 text-sm">Lessons Completed</p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+          <div className="flex items-center justify-between mb-2">
+            <Flame className="w-8 h-8 text-orange-400" />
+            <span className="text-2xl font-bold text-white">{stats.currentStreak}</span>
+          </div>
+          <p className="text-slate-300 text-sm">Day Streak</p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+          <div className="flex items-center justify-between mb-2">
+            <Trophy className="w-8 h-8 text-yellow-400" />
+            <span className="text-2xl font-bold text-white">{stats.totalPoints}</span>
+          </div>
+          <p className="text-slate-300 text-sm">Total Points</p>
+        </div>
+
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+          <div className="flex items-center justify-between mb-2">
+            <Award className="w-8 h-8 text-purple-400" />
+            <span className="text-2xl font-bold text-white">{stats.rank}</span>
+          </div>
+          <p className="text-slate-300 text-sm">Global Rank</p>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-white mb-4">Continue Learning</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {activities.map((activity, index) => (
             <button
-              onClick={() => navigate('/settings')}
-              className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all border border-white/20"
+              key={index}
+              onClick={() => navigate(activity.path)}
+              className="group bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-all text-left"
             >
-              <SettingsIcon className="w-5 h-5" />
-              Settings
+              <div className={`w-12 h-12 rounded-lg ${activity.bgColor} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                <activity.icon className={`w-6 h-6 bg-gradient-to-r ${activity.color} bg-clip-text text-transparent`} style={{ WebkitTextFillColor: 'transparent' }} />
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">{activity.title}</h3>
+              <p className="text-slate-400 text-sm">{activity.description}</p>
             </button>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 transition-all border border-red-500/30"
-            >
-              <LogOut className="w-5 h-5" />
-              Logout
-            </button>
-          </div>
+          ))}
         </div>
+      </div>
 
-        {/* Key Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-purple-500/30 rounded-lg flex items-center justify-center">
-                <Award className="w-6 h-6 text-purple-400" />
-              </div>
-              <span className="text-3xl font-bold text-white">{stats.total_points}</span>
-            </div>
-            <p className="text-gray-300 font-medium">Total Points</p>
-            <p className="text-sm text-gray-400 mt-1">Keep learning to earn more!</p>
+      {/* Progress Overview */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white">Weekly Progress</h3>
+            <TrendingUp className="w-6 h-6 text-green-400" />
           </div>
-
-          <div className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/30">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-blue-500/30 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-blue-400" />
-              </div>
-              <span className="text-3xl font-bold text-white">{stats.lessons_completed}</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Activity Days</span>
+              <span className="text-white font-semibold">{stats.weeklyActivity}/7</span>
             </div>
-            <p className="text-gray-300 font-medium">Lessons Completed</p>
-            <p className="text-sm text-gray-400 mt-1">Great progress!</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-500/20 to-red-500/20 backdrop-blur-lg rounded-2xl p-6 border border-orange-500/30">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-orange-500/30 rounded-lg flex items-center justify-center">
-                <Flame className="w-6 h-6 text-orange-400" />
-              </div>
-              <span className="text-3xl font-bold text-white">{stats.current_streak}</span>
-            </div>
-            <p className="text-gray-300 font-medium">Day Streak</p>
-            <p className="text-sm text-gray-400 mt-1">Don't break the chain! 🔥</p>
-          </div>
-
-          <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-lg rounded-2xl p-6 border border-green-500/30">
-            <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-green-500/30 rounded-lg flex items-center justify-center">
-                <Volume2 className="w-6 h-6 text-green-400" />
-              </div>
-              <span className="text-3xl font-bold text-white">{stats.vocabulary_learned}</span>
-            </div>
-            <p className="text-gray-300 font-medium">Words Learned</p>
-            <p className="text-sm text-gray-400 mt-1">Expand your vocabulary!</p>
-          </div>
-        </div>
-
-        {/* Motivational Banner */}
-        <div className="bg-gradient-to-r from-purple-600/30 to-pink-600/30 backdrop-blur-lg rounded-2xl p-6 border border-purple-500/30 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center flex-shrink-0">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white mb-1">
-                {stats.current_streak >= 7 ? '🔥 You\'re on fire!' : '🎯 Keep up the momentum!'}
-              </h3>
-              <p className="text-gray-300">
-                {stats.current_streak >= 7 
-                  ? `Amazing! You've studied for ${stats.current_streak} days straight. Keep going!`
-                  : 'Study a little every day to build consistency and see faster progress.'}
-              </p>
+            <div className="w-full bg-white/10 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all"
+                style={{ width: `${(stats.weeklyActivity / 7) * 100}%` }}
+              />
             </div>
           </div>
         </div>
 
-        {/* Progress Tracking Component */}
-        <div className="mb-8">
-          <ProgressTracking />
-        </div>
-
-        {/* Quick Actions Grid */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Learning Activities</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              return (
-                <button
-                  key={index}
-                  onClick={() => navigate(action.path)}
-                  className="group bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-white/40 transition-all hover:scale-105 text-left"
-                >
-                  <div className={`w-12 h-12 bg-gradient-to-br ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white mb-1">{action.title}</h3>
-                  <p className="text-sm text-gray-400 mb-2">{action.description}</p>
-                  <p className="text-xs text-purple-400 font-semibold">{action.stats}</p>
-                </button>
-              );
-            })}
+        <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white">Daily Goal</h3>
+            <Target className="w-6 h-6 text-blue-400" />
           </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
-            <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
-            
-            {recentActivity.length > 0 ? (
-              <div className="space-y-3">
-                {recentActivity.map((activity, index) => {
-                  const Icon = getActivityIcon(activity.activity_type);
-                  const colorClass = getActivityColor(activity.activity_type);
-                  
-                  return (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
-                      <div className={`w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0`}>
-                        <Icon className={`w-5 h-5 ${colorClass}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium truncate">
-                          {activity.activity_name || activity.activity_type.replace('_', ' ')}
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          {activity.points} points • {new Date(activity.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      {activity.duration_minutes > 0 && (
-                        <div className="flex items-center gap-1 text-gray-400 text-sm">
-                          <Clock className="w-4 h-4" />
-                          {activity.duration_minutes}m
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Target className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-400">No activity yet. Start learning to see your progress here!</p>
-              </div>
-            )}
-          </div>
-
-          {/* Study Tips */}
-          <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-lg rounded-2xl p-6 border border-blue-500/30">
-            <h3 className="text-xl font-bold text-white mb-4">💡 Study Tips</h3>
-            
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-blue-400 font-bold">1</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Study Daily</h4>
-                  <p className="text-gray-300 text-sm">Even 15 minutes a day builds momentum and creates lasting habits.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-purple-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-purple-400 font-bold">2</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Mix It Up</h4>
-                  <p className="text-gray-300 text-sm">Practice different skills (reading, writing, speaking) for balanced improvement.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-green-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-green-400 font-bold">3</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Review Regularly</h4>
-                  <p className="text-gray-300 text-sm">Revisit vocabulary and concepts to move them into long-term memory.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-orange-500/30 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-orange-400 font-bold">4</span>
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">Track Progress</h4>
-                  <p className="text-gray-300 text-sm">Watch your stats grow and celebrate small wins along the way!</p>
-                </div>
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">Today's Target</span>
+              <span className="text-white font-semibold">20 minutes</span>
             </div>
+            <div className="w-full bg-white/10 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all"
+                style={{ width: '60%' }}
+              />
+            </div>
+            <p className="text-slate-400 text-sm">12 minutes completed today</p>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
 
-export default Dashboard;
+      {/* Guest Mode Notice */}
+      {isGuest && (
+        <div className="mt-8 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <Award className="w-8 h-8 text-yellow-400 flex-shrink-0 mt-1" />
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white mb-2">
+                Create an account to save your progress! 🚀
+              </h3>
+              <p className="text-slate-300 mb-4">
+                Sign up now to track your learning journey, earn achievements, and compete on the leaderboard.
+              </p>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('guestMode');
+                  localStorage.removeItem('guestUser');
+                  navigate('/login');
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all"
+              >
+                Sign Up Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </PageWrapper>
+  );
+}

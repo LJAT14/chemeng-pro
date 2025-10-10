@@ -1,226 +1,342 @@
-// src/pages/LandingPage.jsx
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Mic, 
-  BookOpen, 
-  FileText, 
-  Target, 
-  Briefcase, 
+ import { useNavigate } from 'react-router-dom';
+import {
+  Mic,
+  BookOpen,
   Headphones,
+  PenTool,
+  Trophy,
   Sparkles,
   ArrowRight,
   CheckCircle,
-  LogIn
+  MessageCircle,
+  Phone,
+  Mail,
+  Globe,
+  Star,
+  Award,
+  Users,
+  GraduationCap
 } from 'lucide-react';
 
-const LandingPage = () => {
+export default function LandingPage() {
   const navigate = useNavigate();
 
   const features = [
     {
-      icon: Briefcase,
-      title: 'AI Interview Practice',
-      description: 'Practice chemical engineering interviews with AI feedback',
-      path: '/interview',
-      color: 'from-purple-500 to-pink-500'
-    },
-    {
       icon: Mic,
-      title: 'Pronunciation Lab',
-      description: 'Master technical terminology with voice recognition',
-      path: '/pronunciation',
-      color: 'from-blue-500 to-cyan-500'
-    },
-    {
-      icon: FileText,
-      title: 'Writing Practice',
-      description: 'TOEFL essays, technical reports, and business writing',
-      path: '/writing',
-      color: 'from-green-500 to-emerald-500'
-    },
-    {
-      icon: Target,
-      title: 'Grammar Hub',
-      description: 'Grammar lessons and exercises for technical English',
-      path: '/grammar',
-      color: 'from-orange-500 to-red-500'
-    },
-    {
-      icon: BookOpen,
-      title: 'Vocabulary Builder',
-      description: 'Learn chemical engineering terminology',
-      path: '/vocabulary',
-      color: 'from-yellow-500 to-orange-500'
+      title: 'Interview Simulator',
+      description: 'Practice technical interviews with AI-powered feedback',
+      color: 'from-blue-500 to-cyan-500',
     },
     {
       icon: Headphones,
-      title: 'Reading Comprehension',
-      description: 'Audio articles with comprehension exercises',
-      path: '/reading',
-      color: 'from-indigo-500 to-purple-500'
-    }
+      title: 'Pronunciation Lab',
+      description: 'Perfect your English pronunciation with audio feedback',
+      color: 'from-purple-500 to-pink-500',
+    },
+    {
+      icon: BookOpen,
+      title: 'Bilingual Library',
+      description: 'Learn with English-Portuguese side-by-side lessons',
+      color: 'from-green-500 to-emerald-500',
+    },
+    {
+      icon: PenTool,
+      title: 'Writing Practice',
+      description: 'Improve your writing with instant AI corrections',
+      color: 'from-orange-500 to-red-500',
+    },
+    {
+      icon: Trophy,
+      title: 'Track Progress',
+      description: 'Monitor your improvement with detailed analytics',
+      color: 'from-yellow-500 to-orange-500',
+    },
+    {
+      icon: MessageCircle,
+      title: 'Private Lessons',
+      description: 'One-on-one tutoring with experienced teacher',
+      color: 'from-indigo-500 to-purple-500',
+    },
   ];
 
   const benefits = [
-    'AI-powered feedback on your answers',
-    'Voice recognition for pronunciation',
-    'TOEFL writing practice',
-    'Track progress with an account',
-    'Practice anytime, anywhere',
-    'No credit card required'
+    'Learn at your own pace',
+    'AI-powered feedback',
+    'Bilingual content (EN-PT)',
+    'Track your progress',
+    'Interview preparation',
+    'Native pronunciation guides',
   ];
 
+  const handleWhatsAppContact = () => {
+    const message = encodeURIComponent('Hello! I am interested in learning English. Can you tell me more about your classes?');
+    window.open(`https://wa.me/27842677035?text=${message}`, '_blank');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-950 to-pink-950">
-      {/* Navigation */}
-      <nav className="border-b border-white/10 bg-white/5 backdrop-blur-lg">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <header className="border-b border-white/10 bg-white/5 backdrop-blur-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-purple-400" />
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <div className="flex items-center gap-3">
+              <img src="/assets/logo.svg" alt="Bacana English" className="w-10 h-10" />
+              <span className="text-2xl font-bold text-white">
                 Bacana English
-              </h1>
+              </span>
             </div>
             <button
               onClick={() => navigate('/login')}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-all"
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-all"
             >
-              <LogIn className="w-4 h-4" />
-              Login / Sign Up
+              Login
             </button>
           </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
-            Master Chemical Engineering
-            <br />
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Interviews & English
-            </span>
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto text-center">
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+            Master English for
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"> Interviews & Life</span>
           </h1>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-xl md:text-2xl text-slate-300 mb-8 max-w-3xl mx-auto">
             Practice interviews, improve pronunciation, and enhance your technical English skills with AI-powered tools
           </p>
-
+          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => navigate('/interview')}
-              className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+              onClick={() => navigate('/login')}
+              className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-lg"
             >
-              Start Practicing Now (Free)
+              <Sparkles className="w-6 h-6" />
+              Start Learning Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
+            
             <button
-              onClick={() => navigate('/login')}
-              className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl font-semibold transition-all border border-white/20"
+              onClick={handleWhatsAppContact}
+              className="group bg-white/10 hover:bg-white/20 border-2 border-white/20 text-white px-8 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-lg backdrop-blur-lg"
             >
-              Create Account (Track Progress)
+              <MessageCircle className="w-6 h-6" />
+              Contact Teacher
             </button>
           </div>
+
+          {/* Trust Indicators */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-slate-400">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              <span>100+ Students</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-yellow-400" />
+              <span>5.0 Rating</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-5 h-5" />
+              <span>Learn Anywhere</span>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* Features Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h2 className="text-4xl font-bold text-white text-center mb-4">
-          Everything You Need to Succeed
-        </h2>
-        <p className="text-gray-400 text-center mb-12">
-          All features available for free. Create an account to track your progress.
-        </p>
+      {/* Features Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Everything You Need to Learn English
+            </h2>
+            <p className="text-xl text-slate-300 max-w-2xl mx-auto">
+              AI-powered tools and bilingual content designed for Portuguese speakers
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <button
-              key={index}
-              onClick={() => navigate(feature.path)}
-              className="group bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all text-left hover:scale-105 transform"
-            >
-              <div className={`w-14 h-14 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                <feature.icon className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-white font-semibold text-xl mb-2">{feature.title}</h3>
-              <p className="text-gray-400 mb-4">{feature.description}</p>
-              <div className="flex items-center text-purple-400 font-medium group-hover:gap-2 gap-1 transition-all">
-                Try it now
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Benefits Section */}
-      <div className="bg-white/5 backdrop-blur-lg border-y border-white/10 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">
-            Why Bacana English?
-          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {benefits.map((benefit, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
-                <p className="text-gray-300">{benefit}</p>
+            {features.map((feature, index) => (
+              <div
+                key={index}
+                className="group bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all hover:scale-105"
+              >
+                <div className={`w-14 h-14 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                  <feature.icon className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                <p className="text-slate-300">{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Teacher Section - NEW */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-3xl p-8 md:p-12 border border-white/20">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              {/* Teacher Info */}
+              <div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/20 rounded-full mb-6">
+                  <Award className="w-5 h-5 text-purple-400" />
+                  <span className="text-purple-300 font-semibold">Experienced Teacher</span>
+                </div>
+                
+                <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                  Learn with Larismar
+                </h2>
+                
+                <p className="text-xl text-slate-300 mb-6">
+                  Experienced online English teacher specializing in helping Portuguese speakers master English for interviews, business, and daily life.
+                </p>
+
+                <div className="space-y-4 mb-8">
+                  <div className="flex items-center gap-3 text-slate-200">
+                    <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
+                    <span>5+ years teaching English online</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-200">
+                    <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
+                    <span>Specialist in technical & business English</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-200">
+                    <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
+                    <span>Bilingual lessons (English-Portuguese)</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-slate-200">
+                    <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
+                    <span>Interview preparation expert</span>
+                  </div>
+                </div>
+
+                {/* Contact Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={handleWhatsAppContact}
+                    className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-all text-lg"
+                  >
+                    <Phone className="w-6 h-6" />
+                    WhatsApp: +27 84 267 7035
+                  </button>
+                  
+                  <button
+                    onClick={() => window.open('mailto:larismar@bacanaenglish.com')}
+                    className="flex items-center justify-center gap-3 px-8 py-4 bg-white/10 hover:bg-white/20 border-2 border-white/20 text-white rounded-xl font-semibold transition-all"
+                  >
+                    <Mail className="w-6 h-6" />
+                    Email Me
+                  </button>
+                </div>
+              </div>
+
+              {/* Teacher Image/Avatar */}
+              <div className="flex justify-center lg:justify-end">
+                <div className="relative">
+                  <div className="w-80 h-80 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center text-white text-9xl font-bold shadow-2xl">
+                    L
+                  </div>
+                  {/* Floating badges */}
+                  <div className="absolute -top-4 -right-4 bg-yellow-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
+                    <Star className="w-5 h-5" />
+                    5.0
+                  </div>
+                  <div className="absolute -bottom-4 -left-4 bg-purple-600 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5" />
+                    100+ Students
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Choose Us */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+              Why Bacana English?
+            </h2>
+            <p className="text-xl text-slate-300">
+              The perfect platform for Portuguese speakers learning English
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {benefits.map((benefit, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-4 bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20"
+              >
+                <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
+                <span className="text-lg text-white font-medium">{benefit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <h2 className="text-4xl font-bold text-white mb-6">
-          Ready to Get Started?
-        </h2>
-        <p className="text-xl text-gray-300 mb-8">
-          Try any feature for free right now, or create an account to save your progress
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <button
-            onClick={() => navigate('/interview')}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-semibold transition-all"
-          >
-            Start Free Practice
-          </button>
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-white text-purple-600 hover:bg-gray-100 px-8 py-4 rounded-xl font-semibold transition-all"
-          >
-            Sign Up Free
-          </button>
-        </div>
-      </div>
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+            Ready to Start Your English Journey?
+          </h2>
+          <p className="text-xl text-slate-300 mb-8">
+            Join hundreds of students improving their English every day
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => navigate('/login')}
+              className="group bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-10 py-5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-lg"
+            >
+              <Sparkles className="w-6 h-6" />
+              Get Started Free
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
 
-      <style jsx>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
+            <button
+              onClick={handleWhatsAppContact}
+              className="group bg-green-600 hover:bg-green-700 text-white px-10 py-5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-lg"
+            >
+              <MessageCircle className="w-6 h-6" />
+              Book a Private Lesson
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 bg-black/30 py-8 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <img src="/assets/logo.svg" alt="Bacana English" className="w-8 h-8" />
+            <span className="text-xl font-bold text-white">Bacana English</span>
+          </div>
+          <p className="text-slate-400 mb-4">
+            Empowering Portuguese speakers to master English
+          </p>
+          <div className="flex items-center justify-center gap-6 text-slate-400">
+            <button onClick={handleWhatsAppContact} className="hover:text-white transition-colors">
+              WhatsApp
+            </button>
+            <button onClick={() => window.open('mailto:larismar@bacanaenglish.com')} className="hover:text-white transition-colors">
+              Email
+            </button>
+            <button onClick={() => navigate('/private-lessons')} className="hover:text-white transition-colors">
+              Private Lessons
+            </button>
+          </div>
+          <p className="text-slate-500 text-sm mt-6">
+            © 2025 Bacana English. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </div>
   );
-};
-
-export default LandingPage;
+}

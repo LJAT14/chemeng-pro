@@ -1,26 +1,26 @@
-import React from 'react';
+// src/components/ProtectedRoute.jsx
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
+import { Loader } from 'lucide-react';
 
-const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+export default function ProtectedRoute({ children }) {
+  const { user, loading, isGuest } = useAuth();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
-          <p className="text-white mt-4">Loading...</p>
+          <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
+          <p className="text-white text-lg">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
+  // Allow access if user is authenticated OR in guest mode
+  if (!user && !isGuest) {
     return <Navigate to="/login" replace />;
   }
 
   return children;
-};
-
-export default ProtectedRoute;
+}
