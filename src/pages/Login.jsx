@@ -1,10 +1,13 @@
+// src/pages/Login.jsx - CLEAN VERSION (No test code)
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Sparkles, Loader, Mail, Lock, User, Eye, EyeOff, UserCircle } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
 
 export default function Login() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -18,6 +21,8 @@ export default function Login() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkUser = async () => {
       try {
         // Check guest mode FIRST (no API call needed)
@@ -34,37 +39,41 @@ export default function Login() {
 
         const sessionPromise = supabase.auth.getSession();
 
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]);
-        
-        if (error && error.message !== 'Timeout') {
-          console.error('Session check error:', error);
-        }
-
-        if (session) {
-          navigate('/dashboard');
+        try {
+          const { data: { session } } = await Promise.race([
+            sessionPromise,
+            timeoutPromise
+          ]);
+          
+          if (session && isMounted) {
+            navigate('/dashboard');
+          }
+        } catch (err) {
+          if (err.message === 'Timeout') {
+            console.log('Session check timed out');
+          }
         }
       } catch (err) {
-        if (err.message === 'Timeout') {
-          console.log('Session check timed out - continuing to login page');
-        } else {
-          console.error('Auth check failed:', err);
-        }
+        console.error('Auth check failed:', err);
       } finally {
-        setIsCheckingAuth(false);
-        
-        // Load remembered email
-        const rememberedEmail = localStorage.getItem('rememberedEmail');
-        if (rememberedEmail) {
-          setEmail(rememberedEmail);
-          setRememberMe(true);
+        if (isMounted) {
+          setIsCheckingAuth(false);
+          
+          // Load remembered email
+          const rememberedEmail = localStorage.getItem('rememberedEmail');
+          if (rememberedEmail) {
+            setEmail(rememberedEmail);
+            setRememberMe(true);
+          }
         }
       }
     };
 
     checkUser();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   const handleGuestMode = () => {
@@ -76,6 +85,8 @@ export default function Login() {
       full_name: 'Guest User',
       isGuest: true
     }));
+    
+    showToast('Welcome! Exploring as guest 🎉', 'success');
     
     // Navigate to dashboard
     navigate('/dashboard');
@@ -104,15 +115,19 @@ export default function Login() {
         localStorage.removeItem('rememberedEmail');
       }
 
+      showToast('Welcome back!', 'success');
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
       if (error.message.includes('Invalid login credentials')) {
         setError('Invalid email or password');
+        showToast('Invalid credentials', 'error');
       } else if (error.message.includes('Email not confirmed')) {
         setError('Please check your email to confirm your account');
+        showToast('Please verify your email', 'warning');
       } else {
         setError(error.message || 'Login failed');
+        showToast('Login failed', 'error');
       }
     } finally {
       setLoading(false);
@@ -122,6 +137,7 @@ export default function Login() {
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
+    setMessage('');
 
     if (!fullName.trim()) {
       setError('Please enter your full name');
@@ -147,13 +163,15 @@ export default function Login() {
         options: {
           data: {
             full_name: fullName,
-          }
+          },
+          emailRedirectTo: window.location.origin + '/dashboard'
         }
       });
 
       if (error) throw error;
 
       if (data.user) {
+        // Create user profile
         const { error: profileError } = await supabase
           .from('user_profiles')
           .insert([
@@ -168,6 +186,7 @@ export default function Login() {
           console.error('Profile creation error:', profileError);
         }
 
+        // Create user progress
         const { error: progressError } = await supabase
           .from('user_progress')
           .insert([
@@ -181,29 +200,39 @@ export default function Login() {
         if (progressError) {
           console.error('Progress creation error:', progressError);
         }
+
+        // Create gamification record
+        const { error: gamificationError } = await supabase
+          .from('user_gamification')
+          .insert([
+            {
+              user_id: data.user.id,
+              total_points: 0,
+              current_streak: 0,
+            }
+          ]);
+
+        if (gamificationError) {
+          console.error('Gamification creation error:', gamificationError);
+        }
       }
 
       // Clear guest mode if signing up
       localStorage.removeItem('guestMode');
       localStorage.removeItem('guestUser');
 
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      setMessage('Account created! Please check your email to verify your account.');
+      showToast('Check your email to verify account!', 'success');
+      setIsSignup(false);
 
-      if (loginError) {
-        setMessage('Account created! Please check your email to verify.');
-        setIsSignup(false);
-      } else {
-        navigate('/dashboard');
-      }
     } catch (error) {
       console.error('Signup error:', error);
       if (error.message.includes('already registered')) {
         setError('This email is already registered. Please login instead.');
+        showToast('Email already registered', 'error');
       } else {
         setError(error.message || 'Signup failed');
+        showToast('Signup failed', 'error');
       }
     } finally {
       setLoading(false);
@@ -227,7 +256,9 @@ export default function Login() {
       <div className="w-full max-w-md">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/assets/logo.svg" alt="Bacana English" className="w-12 h-12" />
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <span className="text-white text-2xl font-bold">B</span>
+            </div>
             <h1 className="text-3xl font-bold text-white">
               Bacana English
             </h1>

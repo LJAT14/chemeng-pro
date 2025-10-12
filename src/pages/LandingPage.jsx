@@ -1,4 +1,6 @@
- import { useNavigate } from 'react-router-dom';
+/// src/pages/LandingPage.jsx - Updated with Teacher Contact
+import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 import {
   Mic,
   BookOpen,
@@ -129,16 +131,16 @@ export default function LandingPage() {
           {/* Trust Indicators */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-slate-400">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              <span>100+ Students</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-yellow-400" />
-              <span>5.0 Rating</span>
+              <GraduationCap className="w-5 h-5" />
+              <span>Experienced Teacher</span>
             </div>
             <div className="flex items-center gap-2">
               <Globe className="w-5 h-5" />
               <span>Learn Anywhere</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Award className="w-5 h-5 text-purple-400" />
+              <span>Bilingual Lessons</span>
             </div>
           </div>
         </div>
@@ -196,7 +198,7 @@ export default function LandingPage() {
                 <div className="space-y-4 mb-8">
                   <div className="flex items-center gap-3 text-slate-200">
                     <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
-                    <span>5+ years teaching English online</span>
+                    <span>3+ years teaching English online</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-200">
                     <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0" />
@@ -218,8 +220,8 @@ export default function LandingPage() {
                     onClick={handleWhatsAppContact}
                     className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-all text-lg"
                   >
-                    <Phone className="w-6 h-6" />
-                    WhatsApp: +27 84 267 7035
+                    <MessageCircle className="w-6 h-6" />
+                    Contact on WhatsApp
                   </button>
                   
                   <button
@@ -239,13 +241,13 @@ export default function LandingPage() {
                     L
                   </div>
                   {/* Floating badges */}
-                  <div className="absolute -top-4 -right-4 bg-yellow-500 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
-                    <Star className="w-5 h-5" />
-                    5.0
+                  <div className="absolute -top-4 -right-4 bg-purple-600 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
+                    <Award className="w-5 h-5" />
+                    Certified
                   </div>
-                  <div className="absolute -bottom-4 -left-4 bg-purple-600 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
+                  <div className="absolute -bottom-4 -left-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg flex items-center gap-2">
                     <GraduationCap className="w-5 h-5" />
-                    100+ Students
+                    Expert
                   </div>
                 </div>
               </div>

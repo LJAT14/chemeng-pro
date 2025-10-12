@@ -1,0 +1,29 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="24" cy="24" r="24" fill="url(#gradient)" />
+  
+  <!-- Book Icon -->
+  <path d="M14 12C14 10.8954 14.8954 10 16 10H32C33.1046 10 34 10.8954 34 12V36C34 37.1046 33.1046 38 32 38H16C14.8954 38 14 37.1046 14 36V12Z" fill="white" opacity="0.9"/>
+  
+  <!-- Book Pages -->
+  <path d="M24 14V34" stroke="url(#gradient2)" stroke-width="2" stroke-linecap="round"/>
+  <path d="M18 18H30" stroke="url(#gradient2)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M18 22H30" stroke="url(#gradient2)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <path d="M18 26H30" stroke="url(#gradient2)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  
+  <!-- Star accent -->
+  <circle cx="36" cy="12" r="6" fill="#FFD700"/>
+  <path d="M36 9L37 12L40 12L37.5 14L38.5 17L36 15L33.5 17L34.5 14L32 12L35 12L36 9Z" fill="white"/>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <linearGradient id="gradient2" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#9333EA"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+  </defs>
+</svg>
