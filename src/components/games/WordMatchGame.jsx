@@ -1,7 +1,7 @@
  import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Timer, Check, RefreshCw } from 'lucide-react';
-import PageWrapper from '../../components/PageWrapper';
+import PageWrapper from '../PageWrapper';
 import { useToast } from '../../context/ToastContext';
 
 // Word pairs (English - Portuguese)

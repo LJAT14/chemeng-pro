@@ -1,4 +1,4 @@
-// src/App.jsx - COMPLETE FIXED VERSION
+// src/App.jsx - UPDATED WITH ALL NEW GAMES
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
@@ -21,8 +21,18 @@ import Leaderboard from './pages/Leaderboard';
 import Settings from './pages/Settings';
 import PrivateLessons from './pages/PrivateLessons';
 
-// Games
-import WordMatchGame from './pages/games/WordMatchGame';
+// Games Hub (NEW!)
+import GamesHub from './pages/GamesHub';
+
+// Existing Game
+import WordMatchGame from './components/games/WordMatchGame';
+
+// NEW GAMES - Add these 5 games!
+import VocabSpeedMatch from './components/games/VocabSpeedMatch';
+import SentenceBuilder from './components/games/SentenceBuilder';
+import WordScramble from './components/games/WordScramble';
+import ListeningChallenge from './components/games/ListeningChallenge';
+import PronunciationPractice from './components/games/PronunciationPractice';
 
 // Components
 import Navbar from './components/NavBar';
@@ -143,10 +153,13 @@ function App() {
               path="/dashboard"
               element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />}
             />
+            
+            {/* Interview Simulator - YOUR EXISTING FEATURE! ✅ */}
             <Route
               path="/interview"
               element={isAuthenticated ? <InterviewSimulator /> : <Navigate to="/login" replace />}
             />
+            
             <Route
               path="/pronunciation"
               element={isAuthenticated ? <PronunciationLab /> : <Navigate to="/login" replace />}
@@ -175,10 +188,57 @@ function App() {
               path="/book/:bookId"
               element={isAuthenticated ? <BilingualBookViewer /> : <Navigate to="/login" replace />}
             />
+
+            {/* ========================================
+                🎮 GAMES SECTION - NEW & IMPROVED!
+                ======================================== */}
+            
+            {/* Games Hub - Main games page */}
+            <Route
+              path="/games"
+              element={isAuthenticated ? <GamesHub /> : <Navigate to="/login" replace />}
+            />
+
+            {/* Original Word Match Game */}
             <Route
               path="/games/word-match"
               element={isAuthenticated ? <WordMatchGame /> : <Navigate to="/login" replace />}
             />
+
+            {/* ===== NEW GAMES ===== */}
+            
+            {/* Game 1: Vocab Speed Match */}
+            <Route
+              path="/games/speed-match"
+              element={isAuthenticated ? <VocabSpeedMatch /> : <Navigate to="/login" replace />}
+            />
+
+            {/* Game 2: Sentence Builder */}
+            <Route
+              path="/games/sentence-builder"
+              element={isAuthenticated ? <SentenceBuilder /> : <Navigate to="/login" replace />}
+            />
+
+            {/* Game 3: Word Scramble */}
+            <Route
+              path="/games/word-scramble"
+              element={isAuthenticated ? <WordScramble /> : <Navigate to="/login" replace />}
+            />
+
+            {/* Game 4: Listening Challenge */}
+            <Route
+              path="/games/listening"
+              element={isAuthenticated ? <ListeningChallenge /> : <Navigate to="/login" replace />}
+            />
+
+            {/* Game 5: Pronunciation Practice */}
+            <Route
+              path="/games/pronunciation"
+              element={isAuthenticated ? <PronunciationPractice /> : <Navigate to="/login" replace />}
+            />
+
+            {/* ======================================== */}
+
             <Route
               path="/progress"
               element={isAuthenticated ? <Progress /> : <Navigate to="/login" replace />}
