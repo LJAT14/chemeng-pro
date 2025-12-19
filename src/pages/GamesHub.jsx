@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Zap, Hammer, Shuffle, Headphones, Mic, Target } from 'lucide-react';
+import { Zap, Hammer, Shuffle, Headphones, Mic, Target, BookOpen } from 'lucide-react'; // Added BookOpen
 
 function GamesHub() {
   const navigate = useNavigate();
@@ -65,6 +65,17 @@ function GamesHub() {
       time: '5-10 min',
       path: '/games/pronunciation'
     },
+    // NEW: Book Quiz game
+    {
+      id: 'book-quiz',
+      name: 'Book Quizzes',
+      description: 'Test your comprehension with quizzes from uploaded books',
+      icon: BookOpen,
+      color: 'from-cyan-500 to-blue-600',
+      difficulty: 'All Levels',
+      time: '10-15 min',
+      path: '/library'
+    },
   ];
 
   const getDifficultyColor = (difficulty) => {
@@ -93,11 +104,11 @@ function GamesHub() {
           </p>
         </div>
 
-        {/* Stats Bar */}
+        {/* Stats Bar - Updated count to 7 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
             <div className="text-center">
-              <div className="text-4xl font-bold text-purple-400 mb-2">6</div>
+              <div className="text-4xl font-bold text-purple-400 mb-2">7</div>
               <div className="text-white/70">Total Games</div>
             </div>
           </div>

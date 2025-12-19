@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Briefcase, MessageCircle, Users, Code, BarChart, Building2, Coffee, Heart, Lightbulb, Wrench, GraduationCap, TrendingUp } from 'lucide-react';
+import { 
+  Briefcase, MessageCircle, Users, Code, BarChart, Building2, 
+  Coffee, Heart, Lightbulb, Wrench, GraduationCap, TrendingUp,
+  ArrowLeft, PlayCircle
+} from 'lucide-react';
 import AIInterviewChat from '../components/interview/AIInterviewChat';
 import Card from '../components/shared/Card';
 
@@ -27,13 +31,13 @@ const formatQuestions = (questionStrings, roleId) => {
     id: `${roleId}-${index + 1}`,
     question: {
       en: q,
-      pt: q // You can add Portuguese translations later
+      pt: q // Add Portuguese translations later if needed
     },
     category: 'general'
   }));
 };
 
-// Role categories with questions as simple strings
+// Role categories with questions
 const roles = [
   {
     id: 'chemical-engineer',
@@ -289,7 +293,10 @@ const InterviewSimulator = () => {
   // Show interview chat
   if (interviewStarted && selectedRoleData) {
     // Convert question strings to the format AIInterviewChat expects
-    const formattedQuestions = formatQuestions(selectedRoleData.questionStrings, selectedRoleData.id);
+    const formattedQuestions = formatQuestions(
+      selectedRoleData.questionStrings, 
+      selectedRoleData.id
+    );
     
     console.log('Starting interview with formatted questions:', formattedQuestions);
 
@@ -298,13 +305,27 @@ const InterviewSimulator = () => {
         <div className="max-w-4xl mx-auto">
           <button
             onClick={handleBack}
-            className="mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+            className="mb-4 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center gap-2"
           >
-            ← Back to Role Selection
+            <ArrowLeft className="w-4 h-4" />
+            Back to Role Selection
           </button>
+          
+          <div className="mb-4 bg-white/10 backdrop-blur-lg rounded-xl p-4 border border-white/20">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${selectedRoleData.color} flex items-center justify-center`}>
+                {React.createElement(selectedRoleData.icon, { className: 'w-6 h-6 text-white' })}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">{selectedRoleData.name}</h2>
+                <p className="text-gray-300 text-sm">{selectedRoleData.questionStrings.length} questions</p>
+              </div>
+            </div>
+          </div>
           
           <AIInterviewChat 
             questions={formattedQuestions}
+            mode={selectedMode}
           />
         </div>
       </div>
@@ -326,9 +347,10 @@ const InterviewSimulator = () => {
         <div className="max-w-6xl mx-auto">
           <button
             onClick={handleBack}
-            className="mb-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+            className="mb-6 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors flex items-center gap-2"
           >
-            ← Back to Mode Selection
+            <ArrowLeft className="w-4 h-4" />
+            Back to Mode Selection
           </button>
 
           <div className="text-center mb-12">
@@ -366,9 +388,10 @@ const InterviewSimulator = () => {
                         <p className="text-gray-300 text-sm mb-2">
                           {role.questionStrings.length} questions
                         </p>
-                        <p className="text-gray-400 text-xs">
-                          Click to start interview
-                        </p>
+                        <div className="flex items-center gap-2 text-purple-400 text-sm font-medium">
+                          <PlayCircle className="w-4 h-4" />
+                          <span>Start Interview</span>
+                        </div>
                       </Card>
                     </button>
                   );

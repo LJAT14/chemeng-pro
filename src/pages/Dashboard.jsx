@@ -1,4 +1,4 @@
- import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import {
@@ -11,9 +11,10 @@ import {
   Target,
   Flame,
   Award,
-  Calendar,
   CheckCircle2,
-  Loader
+  Loader,
+  Gamepad2,
+  Library // NEW: Added for Book Library
 } from 'lucide-react';
 import PageWrapper from '../components/PageWrapper';
 
@@ -33,7 +34,7 @@ export default function Dashboard() {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        // Check for guest mode
+        // Check for guest mode FIRST - this is instant, no async needed
         const guestMode = localStorage.getItem('guestMode') === 'true';
         
         if (guestMode) {
@@ -51,10 +52,10 @@ export default function Dashboard() {
             weeklyActivity: guestStats.weeklyActivity || 0,
           });
           setLoading(false);
-          return;
+          return; // Exit early for guest users
         }
 
-        // Load real user data from Supabase
+        // Only proceed with Supabase for real users
         const { data: { user: authUser } } = await supabase.auth.getUser();
         
         if (authUser) {
@@ -73,32 +74,31 @@ export default function Dashboard() {
             .eq('user_id', authUser.id)
             .single();
 
-          // Set 2 second timeout for data fetching
+          // Set 3 second timeout for data fetching
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 2000)
+            setTimeout(() => reject(new Error('Timeout')), 3000)
           );
 
           try {
-            const [progressResult, gamificationResult] = await Promise.race([
+            const results = await Promise.race([
               Promise.all([progressPromise, gamificationPromise]),
               timeoutPromise
             ]);
 
-            if (progressResult) {
-              const { data: progressData } = progressResult;
-              const { data: gamificationData } = gamificationResult;
+            if (results && Array.isArray(results)) {
+              const [progressResult, gamificationResult] = results;
 
               setStats({
-                lessonsCompleted: progressData?.lessons_completed || 0,
-                currentStreak: gamificationData?.current_streak || 0,
-                totalPoints: gamificationData?.total_points || 0,
-                rank: gamificationData?.rank || '--',
-                weeklyActivity: progressData?.weekly_activity || 0,
+                lessonsCompleted: progressResult?.data?.lessons_completed || 0,
+                currentStreak: gamificationResult?.data?.current_streak || 0,
+                totalPoints: gamificationResult?.data?.total_points || 0,
+                rank: gamificationResult?.data?.rank || '--',
+                weeklyActivity: progressResult?.data?.weekly_activity || 0,
               });
             }
           } catch (error) {
-            console.log('Using default stats due to timeout or error');
-            // Continue with default stats
+            console.log('Using default stats (timeout or error)');
+            // Continue with default stats - no problem!
           }
         }
       } catch (error) {
@@ -153,9 +153,18 @@ export default function Dashboard() {
       bgColor: 'bg-yellow-500/10',
     },
     {
-      icon: BookOpen,
-      title: 'Library',
-      description: 'Access English lessons and books',
+      icon: Gamepad2,
+      title: 'Games Hub',
+      description: 'Play fun learning games to practice English',
+      path: '/games',
+      color: 'from-pink-500 to-rose-500',
+      bgColor: 'bg-pink-500/10',
+    },
+    // NEW: Book Library feature
+    {
+      icon: Library,
+      title: 'Book Library',
+      description: 'Upload PDFs and chat with AI about your books',
       path: '/library',
       color: 'from-indigo-500 to-purple-500',
       bgColor: 'bg-indigo-500/10',
@@ -164,7 +173,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <Loader className="w-8 h-8 text-purple-400 animate-spin" />
       </div>
     );

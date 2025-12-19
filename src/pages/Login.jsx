@@ -1,4 +1,3 @@
-// src/pages/Login.jsx - CLEAN VERSION (No test code)
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -22,41 +21,54 @@ export default function Login() {
 
   useEffect(() => {
     let isMounted = true;
+    let checkComplete = false;
 
     const checkUser = async () => {
       try {
-        // Check guest mode FIRST (no API call needed)
+        // Check guest mode FIRST (instant, no async delay)
         const isGuest = localStorage.getItem('guestMode') === 'true';
-        if (isGuest) {
-          navigate('/dashboard');
+        if (isGuest && isMounted && !checkComplete) {
+          console.log('Guest mode detected, redirecting...');
+          checkComplete = true;
+          navigate('/dashboard', { replace: true });
           return;
         }
 
         // Add timeout to prevent hanging on slow connections
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 2000)
+          setTimeout(() => reject(new Error('Timeout')), 3000)
         );
 
         const sessionPromise = supabase.auth.getSession();
 
         try {
-          const { data: { session } } = await Promise.race([
+          const { data: { session }, error } = await Promise.race([
             sessionPromise,
             timeoutPromise
           ]);
           
-          if (session && isMounted) {
-            navigate('/dashboard');
+          if (!checkComplete && isMounted) {
+            if (error) {
+              console.error('Session check error:', error);
+            } else if (session) {
+              console.log('Active session found, redirecting...');
+              checkComplete = true;
+              navigate('/dashboard', { replace: true });
+              return;
+            }
           }
         } catch (err) {
           if (err.message === 'Timeout') {
-            console.log('Session check timed out');
+            console.log('Session check timed out - staying on login');
+          } else {
+            console.error('Session check error:', err);
           }
         }
       } catch (err) {
         console.error('Auth check failed:', err);
       } finally {
-        if (isMounted) {
+        if (isMounted && !checkComplete) {
+          checkComplete = true;
           setIsCheckingAuth(false);
           
           // Load remembered email
@@ -73,23 +85,43 @@ export default function Login() {
 
     return () => {
       isMounted = false;
+      checkComplete = true;
     };
   }, [navigate]);
 
   const handleGuestMode = () => {
-    // Set guest mode flag
-    localStorage.setItem('guestMode', 'true');
-    localStorage.setItem('guestUser', JSON.stringify({
-      id: 'guest-' + Date.now(),
-      email: 'guest@bacanaenglish.com',
-      full_name: 'Guest User',
-      isGuest: true
-    }));
-    
-    showToast('Welcome! Exploring as guest 🎉', 'success');
-    
-    // Navigate to dashboard
-    navigate('/dashboard');
+    try {
+      // Clear any existing Supabase session first
+      supabase.auth.signOut().catch(() => {});
+      
+      // Set guest mode
+      localStorage.setItem('guestMode', 'true');
+      localStorage.setItem('guestUser', JSON.stringify({
+        id: 'guest-' + Date.now(),
+        email: 'guest@bacanaenglish.com',
+        full_name: 'Guest User',
+        isGuest: true
+      }));
+      
+      // Initialize guest stats if not exist
+      if (!localStorage.getItem('guestStats')) {
+        localStorage.setItem('guestStats', JSON.stringify({
+          lessonsCompleted: 0,
+          currentStreak: 0,
+          totalPoints: 0,
+          rank: 'Guest',
+          weeklyActivity: 0,
+        }));
+      }
+      
+      showToast('Welcome! Exploring as guest 🎉', 'success');
+      
+      // Use navigate instead of window.location for React Router compatibility
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      console.error('Guest mode error:', error);
+      showToast('Failed to enter guest mode', 'error');
+    }
   };
 
   const handleLogin = async (e) => {
@@ -99,7 +131,7 @@ export default function Login() {
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -108,27 +140,38 @@ export default function Login() {
       // Clear guest mode if logging in
       localStorage.removeItem('guestMode');
       localStorage.removeItem('guestUser');
+      localStorage.removeItem('guestStats');
 
       if (rememberMe) {
-        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberedEmail', email.trim());
       } else {
         localStorage.removeItem('rememberedEmail');
       }
 
-      showToast('Welcome back!', 'success');
-      navigate('/dashboard');
+      showToast('Welcome back! 🎉', 'success');
+      
+      // Small delay to ensure auth state propagates
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 100);
+      
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Better error messages
+      let errorMessage = 'Login failed';
       if (error.message.includes('Invalid login credentials')) {
-        setError('Invalid email or password');
-        showToast('Invalid credentials', 'error');
+        errorMessage = 'Invalid email or password';
       } else if (error.message.includes('Email not confirmed')) {
-        setError('Please check your email to confirm your account');
-        showToast('Please verify your email', 'warning');
+        errorMessage = 'Please check your email to confirm your account';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection';
       } else {
-        setError(error.message || 'Login failed');
-        showToast('Login failed', 'error');
+        errorMessage = error.message;
       }
+      
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -139,18 +182,22 @@ export default function Login() {
     setError('');
     setMessage('');
 
+    // Validation
     if (!fullName.trim()) {
       setError('Please enter your full name');
+      showToast('Please enter your full name', 'error');
       return;
     }
 
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
+      showToast('Password must be at least 6 characters', 'error');
       return;
     }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
+      showToast('Passwords do not match', 'error');
       return;
     }
 
@@ -158,13 +205,13 @@ export default function Login() {
 
     try {
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
-            full_name: fullName,
+            full_name: fullName.trim(),
           },
-          emailRedirectTo: window.location.origin + '/dashboard'
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
 
@@ -177,13 +224,15 @@ export default function Login() {
           .insert([
             {
               id: data.user.id,
-              full_name: fullName,
-              email: email,
+              full_name: fullName.trim(),
+              email: email.trim(),
             }
-          ]);
+          ])
+          .select();
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
+          // Don't throw - might already exist
         }
 
         // Create user progress
@@ -195,7 +244,8 @@ export default function Login() {
               lessons_completed: 0,
               total_points: 0,
             }
-          ]);
+          ])
+          .select();
 
         if (progressError) {
           console.error('Progress creation error:', progressError);
@@ -210,7 +260,8 @@ export default function Login() {
               total_points: 0,
               current_streak: 0,
             }
-          ]);
+          ])
+          .select();
 
         if (gamificationError) {
           console.error('Gamification creation error:', gamificationError);
@@ -220,20 +271,33 @@ export default function Login() {
       // Clear guest mode if signing up
       localStorage.removeItem('guestMode');
       localStorage.removeItem('guestUser');
+      localStorage.removeItem('guestStats');
 
       setMessage('Account created! Please check your email to verify your account.');
-      showToast('Check your email to verify account!', 'success');
-      setIsSignup(false);
+      showToast('Check your email to verify account! 📧', 'success');
+      
+      // Switch to login mode after short delay
+      setTimeout(() => {
+        setIsSignup(false);
+        setPassword('');
+        setConfirmPassword('');
+        setFullName('');
+      }, 2000);
 
     } catch (error) {
       console.error('Signup error:', error);
+      
+      let errorMessage = 'Signup failed';
       if (error.message.includes('already registered')) {
-        setError('This email is already registered. Please login instead.');
-        showToast('Email already registered', 'error');
+        errorMessage = 'This email is already registered. Please login instead.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection';
       } else {
-        setError(error.message || 'Signup failed');
-        showToast('Signup failed', 'error');
+        errorMessage = error.message;
       }
+      
+      setError(errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -245,7 +309,7 @@ export default function Login() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <div className="text-center">
           <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
-          <p className="text-white text-lg">Loading...</p>
+          <p className="text-white text-lg">Checking authentication...</p>
         </div>
       </div>
     );
@@ -269,13 +333,13 @@ export default function Login() {
           </p>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200">
+            <div className="mb-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
               {error}
             </div>
           )}
 
           {message && (
-            <div className="mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200">
+            <div className="mb-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-200 text-sm">
               {message}
             </div>
           )}
@@ -294,7 +358,8 @@ export default function Login() {
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="John Doe"
-                    required
+                    required={isSignup}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -313,6 +378,7 @@ export default function Login() {
                   className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="you@example.com"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -330,11 +396,14 @@ export default function Login() {
                   className="w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   placeholder="••••••••"
                   required
+                  disabled={loading}
+                  minLength={6}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -354,7 +423,9 @@ export default function Login() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="••••••••"
-                    required
+                    required={isSignup}
+                    disabled={loading}
+                    minLength={6}
                   />
                 </div>
               </div>
@@ -368,6 +439,7 @@ export default function Login() {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded border-white/20 bg-white/5 text-purple-600 focus:ring-purple-500"
+                    disabled={loading}
                   />
                   <span className="text-sm text-slate-300">Remember me</span>
                 </label>
@@ -377,7 +449,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader className="w-5 h-5 animate-spin" />
@@ -406,7 +478,7 @@ export default function Login() {
             <button
               onClick={handleGuestMode}
               disabled={loading}
-              className="mt-4 w-full bg-white/5 hover:bg-white/10 border border-white/20 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+              className="mt-4 w-full bg-white/5 hover:bg-white/10 disabled:bg-white/5 disabled:cursor-not-allowed border border-white/20 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
             >
               <UserCircle className="w-5 h-5" />
               Continue as Guest
@@ -422,8 +494,11 @@ export default function Login() {
                 setIsSignup(!isSignup);
                 setError('');
                 setMessage('');
+                setPassword('');
+                setConfirmPassword('');
               }}
-              className="text-purple-400 hover:text-purple-300 transition-colors"
+              className="text-purple-400 hover:text-purple-300 transition-colors text-sm"
+              disabled={loading}
             >
               {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign up"}
             </button>

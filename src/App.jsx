@@ -47,6 +47,7 @@ function App() {
 
     const initAuth = async () => {
       try {
+        // Check guest mode FIRST - this is synchronous and instant
         const guestMode = localStorage.getItem('guestMode') === 'true';
         
         if (guestMode) {
@@ -56,45 +57,64 @@ function App() {
             setIsGuest(true);
             setLoading(false);
           }
-          return;
+          return; // Exit early for guest users
         }
 
+        // Add timeout to prevent infinite hanging (increased to 5 seconds)
         const timeoutId = setTimeout(() => {
           if (isMounted) {
-            console.log('Auth check timeout');
+            console.log('Auth check timeout - proceeding without session');
             setLoading(false);
           }
-        }, 3000);
+        }, 5000); // 5 second timeout instead of 3
 
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { session }, error } = await supabase.auth.getSession();
           
           clearTimeout(timeoutId);
           
           if (isMounted) {
-            setUser(session?.user || null);
-            setIsGuest(false);
+            if (error) {
+              console.error('Session error:', error);
+              setUser(null);
+              setIsGuest(false);
+            } else {
+              setUser(session?.user || null);
+              setIsGuest(false);
+            }
             setLoading(false);
           }
         } catch (error) {
           clearTimeout(timeoutId);
-          console.error('Session error:', error);
+          console.error('Session fetch error:', error);
           if (isMounted) {
+            setUser(null);
+            setIsGuest(false);
             setLoading(false);
           }
         }
 
-        const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        // Set up auth state change listener
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state changed:', event);
+          
           if (isMounted) {
+            // Don't override guest mode
             const currentlyGuest = localStorage.getItem('guestMode') === 'true';
             if (!currentlyGuest) {
               setUser(session?.user || null);
               setIsGuest(false);
+              
+              // Handle sign out specifically
+              if (event === 'SIGNED_OUT') {
+                setUser(null);
+                setIsGuest(false);
+              }
             }
           }
         });
         
-        authSubscription = data.subscription;
+        authSubscription = authListener.subscription;
 
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -120,6 +140,7 @@ function App() {
         <div className="text-center">
           <Loader className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-4" />
           <p className="text-white text-lg">Loading Bacana English...</p>
+          <p className="text-gray-400 text-sm mt-2">This should only take a moment...</p>
         </div>
       </div>
     );
@@ -131,7 +152,7 @@ function App() {
     <ToastProvider>
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
         {isAuthenticated && <Navbar />}
-        {isAuthenticated && <GuestModeBanner />}
+        {isAuthenticated && isGuest && <GuestModeBanner />}
         
         <div className="page-transition">
           <Routes>
@@ -227,10 +248,10 @@ function App() {
               element={isAuthenticated ? <PrivateLessons /> : <Navigate to="/login" replace />}
             />
 
-            {/* Catch all */}
+            {/* Catch all - redirect to appropriate page */}
             <Route 
               path="*" 
-              element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} 
+              element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} replace />} 
             />
           </Routes>
         </div>
