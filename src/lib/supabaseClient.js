@@ -17,3 +17,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     storageKey: 'bacana-auth-token',
   }
 });
+// Add this function at the end of the file
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseAnonKey);
+};
