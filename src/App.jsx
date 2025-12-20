@@ -20,6 +20,10 @@ import Leaderboard from './pages/Leaderboard';
 import Settings from './pages/Settings';
 import PrivateLessons from './pages/PrivateLessons';
 
+// NEW: Book System Pages
+import BookSlides from './pages/BookSlides';
+import BookQuiz from './pages/BookQuiz';
+
 // Games Hub
 import GamesHub from './pages/GamesHub';
 
@@ -66,7 +70,7 @@ function App() {
             console.log('Auth check timeout - proceeding without session');
             setLoading(false);
           }
-        }, 5000); // 5 second timeout instead of 3
+        }, 5000);
 
         try {
           const { data: { session }, error } = await supabase.auth.getSession();
@@ -199,6 +203,16 @@ function App() {
             <Route
               path="/book/:bookId"
               element={isAuthenticated ? <BilingualBookViewer /> : <Navigate to="/login" replace />}
+            />
+
+            {/* NEW: Book System Routes */}
+            <Route
+              path="/books/:bookId/slides"
+              element={isAuthenticated ? <BookSlides /> : <Navigate to="/login" replace />}
+            />
+            <Route
+              path="/books/:bookId/quiz"
+              element={isAuthenticated ? <BookQuiz /> : <Navigate to="/login" replace />}
             />
 
             {/* GAMES SECTION */}
