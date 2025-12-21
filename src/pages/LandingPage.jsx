@@ -1,6 +1,4 @@
-/// src/pages/LandingPage.jsx - Updated with Teacher Contact
 import { useNavigate } from 'react-router-dom';
-import Logo from '../components/Logo';
 import {
   Mic,
   BookOpen,
@@ -11,12 +9,9 @@ import {
   ArrowRight,
   CheckCircle,
   MessageCircle,
-  Phone,
   Mail,
   Globe,
-  Star,
   Award,
-  Users,
   GraduationCap
 } from 'lucide-react';
 
@@ -83,7 +78,21 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center gap-3">
-              <img src="/assets/logo.svg" alt="Bacana English" className="w-10 h-10" />
+              {/* Logo from public folder */}
+              <img 
+                src="/favicon.svg" 
+                alt="Bacana English" 
+                className="w-10 h-10"
+                onError={(e) => {
+                  // Fallback to gradient circle with B
+                  e.target.style.display = 'none';
+                  const parent = e.target.parentElement;
+                  const fallback = document.createElement('div');
+                  fallback.className = 'w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center';
+                  fallback.innerHTML = '<span class="text-white text-2xl font-bold">B</span>';
+                  parent.appendChild(fallback);
+                }}
+              />
               <span className="text-2xl font-bold text-white">
                 Bacana English
               </span>
@@ -175,7 +184,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Teacher Section - NEW */}
+      {/* Teacher Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-lg rounded-3xl p-8 md:p-12 border border-white/20">
@@ -317,7 +326,12 @@ export default function LandingPage() {
       <footer className="border-t border-white/10 bg-black/30 py-8 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <img src="/assets/logo.svg" alt="Bacana English" className="w-8 h-8" />
+            <img 
+              src="/favicon.svg" 
+              alt="Bacana English" 
+              className="w-8 h-8"
+              onError={(e) => e.target.style.display = 'none'}
+            />
             <span className="text-xl font-bold text-white">Bacana English</span>
           </div>
           <p className="text-slate-400 mb-4">
@@ -329,9 +343,6 @@ export default function LandingPage() {
             </button>
             <button onClick={() => window.open('mailto:larismar@bacanaenglish.com')} className="hover:text-white transition-colors">
               Email
-            </button>
-            <button onClick={() => navigate('/private-lessons')} className="hover:text-white transition-colors">
-              Private Lessons
             </button>
           </div>
           <p className="text-slate-500 text-sm mt-6">

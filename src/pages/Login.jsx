@@ -21,54 +21,33 @@ export default function Login() {
 
   useEffect(() => {
     let isMounted = true;
-    let checkComplete = false;
 
     const checkUser = async () => {
       try {
-        // Check guest mode FIRST (instant, no async delay)
+        // Check guest mode FIRST
         const isGuest = localStorage.getItem('guestMode') === 'true';
-        if (isGuest && isMounted && !checkComplete) {
+        if (isGuest && isMounted) {
           console.log('Guest mode detected, redirecting...');
-          checkComplete = true;
           navigate('/dashboard', { replace: true });
           return;
         }
 
-        // Add timeout to prevent hanging on slow connections
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 3000)
-        );
-
-        const sessionPromise = supabase.auth.getSession();
-
-        try {
-          const { data: { session }, error } = await Promise.race([
-            sessionPromise,
-            timeoutPromise
-          ]);
-          
-          if (!checkComplete && isMounted) {
-            if (error) {
-              console.error('Session check error:', error);
-            } else if (session) {
-              console.log('Active session found, redirecting...');
-              checkComplete = true;
-              navigate('/dashboard', { replace: true });
-              return;
-            }
-          }
-        } catch (err) {
-          if (err.message === 'Timeout') {
-            console.log('Session check timed out - staying on login');
-          } else {
-            console.error('Session check error:', err);
+        // Check for active session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (isMounted) {
+          if (error) {
+            console.error('Session check error:', error);
+          } else if (session) {
+            console.log('Active session found, redirecting...');
+            navigate('/dashboard', { replace: true });
+            return;
           }
         }
       } catch (err) {
         console.error('Auth check failed:', err);
       } finally {
-        if (isMounted && !checkComplete) {
-          checkComplete = true;
+        if (isMounted) {
           setIsCheckingAuth(false);
           
           // Load remembered email
@@ -85,13 +64,12 @@ export default function Login() {
 
     return () => {
       isMounted = false;
-      checkComplete = true;
     };
   }, [navigate]);
 
   const handleGuestMode = () => {
     try {
-      // Clear any existing Supabase session first
+      // Clear any existing session first
       supabase.auth.signOut().catch(() => {});
       
       // Set guest mode
@@ -103,7 +81,7 @@ export default function Login() {
         isGuest: true
       }));
       
-      // Initialize guest stats if not exist
+      // Initialize guest stats
       if (!localStorage.getItem('guestStats')) {
         localStorage.setItem('guestStats', JSON.stringify({
           lessonsCompleted: 0,
@@ -115,8 +93,6 @@ export default function Login() {
       }
       
       showToast('Welcome! Exploring as guest 🎉', 'success');
-      
-      // Use navigate instead of window.location for React Router compatibility
       navigate('/dashboard', { replace: true });
     } catch (error) {
       console.error('Guest mode error:', error);
@@ -130,17 +106,17 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // CRITICAL: Clear guest mode BEFORE logging in
+      localStorage.removeItem('guestMode');
+      localStorage.removeItem('guestUser');
+      localStorage.removeItem('guestStats');
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
 
       if (error) throw error;
-
-      // Clear guest mode if logging in
-      localStorage.removeItem('guestMode');
-      localStorage.removeItem('guestUser');
-      localStorage.removeItem('guestStats');
 
       if (rememberMe) {
         localStorage.setItem('rememberedEmail', email.trim());
@@ -150,15 +126,12 @@ export default function Login() {
 
       showToast('Welcome back! 🎉', 'success');
       
-      // Small delay to ensure auth state propagates
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 100);
+      // Force reload to clear any cached state
+      window.location.href = '/dashboard';
       
     } catch (error) {
       console.error('Login error:', error);
       
-      // Better error messages
       let errorMessage = 'Login failed';
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = 'Invalid email or password';
@@ -204,6 +177,11 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // CRITICAL: Clear guest mode BEFORE signing up
+      localStorage.removeItem('guestMode');
+      localStorage.removeItem('guestUser');
+      localStorage.removeItem('guestStats');
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -217,72 +195,26 @@ export default function Login() {
 
       if (error) throw error;
 
-      if (data.user) {
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .insert([
-            {
-              id: data.user.id,
-              full_name: fullName.trim(),
-              email: email.trim(),
-            }
-          ])
-          .select();
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Don't throw - might already exist
-        }
-
-        // Create user progress
-        const { error: progressError } = await supabase
-          .from('user_progress')
-          .insert([
-            {
-              user_id: data.user.id,
-              lessons_completed: 0,
-              total_points: 0,
-            }
-          ])
-          .select();
-
-        if (progressError) {
-          console.error('Progress creation error:', progressError);
-        }
-
-        // Create gamification record
-        const { error: gamificationError } = await supabase
-          .from('user_gamification')
-          .insert([
-            {
-              user_id: data.user.id,
-              total_points: 0,
-              current_streak: 0,
-            }
-          ])
-          .select();
-
-        if (gamificationError) {
-          console.error('Gamification creation error:', gamificationError);
-        }
+      // Check if email already exists
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setError('This email is already registered. Please login instead.');
+        showToast('Email already registered. Please login.', 'error');
+        setIsSignup(false);
+        return;
       }
 
-      // Clear guest mode if signing up
-      localStorage.removeItem('guestMode');
-      localStorage.removeItem('guestUser');
-      localStorage.removeItem('guestStats');
-
-      setMessage('Account created! Please check your email to verify your account.');
-      showToast('Check your email to verify account! 📧', 'success');
-      
-      // Switch to login mode after short delay
-      setTimeout(() => {
-        setIsSignup(false);
-        setPassword('');
-        setConfirmPassword('');
-        setFullName('');
-      }, 2000);
+      if (data.user) {
+        // If we have a session, user is logged in immediately (email confirmation disabled)
+        if (data.session) {
+          showToast('Account created! Welcome! 🎉', 'success');
+          // Force reload to clear any cached state
+          window.location.href = '/dashboard';
+        } else {
+          // Email confirmation is enabled
+          setMessage('Account created! Please check your email to verify your account.');
+          showToast('Check your email to verify account! 📧', 'success');
+        }
+      }
 
     } catch (error) {
       console.error('Signup error:', error);
@@ -290,6 +222,7 @@ export default function Login() {
       let errorMessage = 'Signup failed';
       if (error.message.includes('already registered')) {
         errorMessage = 'This email is already registered. Please login instead.';
+        setIsSignup(false);
       } else if (error.message.includes('network')) {
         errorMessage = 'Network error. Please check your connection';
       } else {
@@ -319,9 +252,19 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
+          {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">B</span>
+              <img 
+                src="/favicon.svg" 
+                alt="Bacana English" 
+                className="w-10 h-10"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling.style.display = 'flex';
+                }}
+              />
+              <span className="text-white text-2xl font-bold" style={{ display: 'none' }}>B</span>
             </div>
             <h1 className="text-3xl font-bold text-white">
               Bacana English
